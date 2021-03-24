@@ -1,0 +1,3 @@
+[submodule "arXivDigest"]
+	path = arxivdigest
+	url = https://github.com/iai-group/arXivDigest.git
