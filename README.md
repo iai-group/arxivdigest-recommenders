@@ -6,7 +6,7 @@ Third-party recommender system for arXivDigest. Based on the [sample system](htt
 
 1. Fetch the arXivDigest repository submodule:
    ```sh
-   git submodule --init --recursive
+   git submodule update --init --recursive
    ```
 2. Install the `arxivdigest` Python package:
    ```sh
