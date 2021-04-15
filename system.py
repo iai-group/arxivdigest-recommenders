@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from typing import List
 from elasticsearch import Elasticsearch
 from arxivdigest.connector import ArxivdigestConnector
 
@@ -16,7 +17,7 @@ file_locations = [
 ]
 
 
-def get_config_from_file(file_paths):
+def get_config_from_file(file_paths: List[str]):
     """Checks the given list of file paths for a config file,
     returns None if not found."""
     for file_location in file_paths:
@@ -29,11 +30,19 @@ def get_config_from_file(file_paths):
 
 config_file = get_config_from_file(file_locations)
 
-API_KEY = config_file.get("api_key", "4c02e337-c94b-48b6-b30e-0c06839c81e6")
-API_URL = config_file.get("api_url", "https://api.arxivdigest.org/")
-INDEX = config_file.get("index_name", "main_index")
-ELASTICSEARCH_HOST = config_file.get(
-    "elasticsearch_host", {"host": "127.0.0.1", "port": 9200}
+ARXIVDIGEST_CONFIG = config_file.get("arxivdigest", {})
+ARXIVDIGEST_BASE_URL = ARXIVDIGEST_CONFIG.get(
+    "base_url", "https://api.arxivdigest.org/"
+)
+ARXIVDIGEST_API_KEY = ARXIVDIGEST_CONFIG.get(
+    "api_key", "4c02e337-c94b-48b6-b30e-0c06839c81e6"
+)
+S2_CONFIG = config_file.get("semantic_scholar", {})
+S2_API_KEY = S2_CONFIG.get("api_key")
+ELASTICSEARCH_CONFIG = config_file.get("elasticsearch", {})
+ELASTICSEARCH_INDEX = ELASTICSEARCH_CONFIG.get("index", "arxivdigest_articles")
+ELASTICSEARCH_HOST = ELASTICSEARCH_CONFIG.get(
+    "host", {"host": "127.0.0.1", "port": 9200}
 )
 
 
@@ -56,7 +65,7 @@ def recommend(
 ):
     """Makes and sends recommendations to all users."""
     total_users = arxivdigest_connector.get_number_of_users()
-    logger.info("Starting recommending articles for {} users".format(total_users))
+    logger.info(f"Starting recommending articles for {total_users} users")
     recommendation_count = 0
     while recommendation_count < total_users:
         user_ids = arxivdigest_connector.get_user_ids(recommendation_count)
@@ -68,23 +77,23 @@ def recommend(
         if recommendations:
             arxivdigest_connector.send_article_recommendations(recommendations)
         recommendation_count += len(user_ids)
-        logger.info("Processed {} users".format(recommendation_count))
+        logger.info(f"Processed {recommendation_count} users")
 
 
-def run(api_key, api_url, index):
+def run(api_key: str, base_url: str, index: str):
     """Runs the recommender system:
     - Updates index with new articles
     - Fetches user info for all users
     - Creates and sends recommendations for each user
     """
     es = Elasticsearch(hosts=[ELASTICSEARCH_HOST])
-    arxivdigest_connector = ArxivdigestConnector(api_key, api_url)
+    arxivdigest_connector = ArxivdigestConnector(api_key, base_url)
     if not es.indices.exists(index=index):
         logger.info("Creating index.")
         init_index(es, index)
     logger.info("Indexing articles from arXivDigest API.")
     run_indexing(es, index, arxivdigest_connector)
-    #recommend(es, arxivdigest_connector, index)
+    recommend(es, arxivdigest_connector, index)
     logger.info("\nFinished recommending articles.")
 
 
@@ -106,4 +115,4 @@ if __name__ == "__main__":
     log_level = config_file.get("log_level", "INFO").upper()
     logger.setLevel(log_levels.get(log_level, 20))
 
-    run(API_KEY, API_URL, INDEX)
+    run(ARXIVDIGEST_API_KEY, ARXIVDIGEST_BASE_URL, ELASTICSEARCH_INDEX)
