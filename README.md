@@ -4,12 +4,10 @@ Third-party recommender system for arXivDigest. Based on the [sample system](htt
 
 ## Usage
 
-1. Fetch the arXivDigest submodule:
+1. Install dependencies with `pip install -r requirements.txt`
+1. Fetch the arXivDigest submodule and install the `arxivdigest` package:
    ```sh
    git submodule update --init --recursive
-   ```
-2. Install the `arxivdigest` Python package:
-   ```sh
    cd arxivdigest && pip install .
    ```
 1. Run `python system.py`.

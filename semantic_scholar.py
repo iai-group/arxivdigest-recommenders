@@ -1,4 +1,4 @@
-from requests import Session
+from requests_cache import CachedSession
 from datetime import datetime, timedelta
 from itertools import dropwhile
 from time import sleep
@@ -17,7 +17,7 @@ class SemanticScholar:
         self.max_requests = max_requests
         self.window_size = timedelta(seconds=window_size)
         self.window_requests: List[datetime] = []
-        self.session = Session()
+        self.session = CachedSession(expire_after=300)
         if api_key is not None:
             self.session.headers.update({"x-api-key": api_key})
             self.base_url = "https://partner.semanticscholar.org/v1"
@@ -36,12 +36,12 @@ class SemanticScholar:
 
         return self.session.get(f"{self.base_url}{endpoint}", **kwargs).json()
 
-    def get_paper(self, s2_paper_id: str = None, arxiv_id: str = None) -> dict:
-        if sum(i is None for i in (s2_paper_id, arxiv_id)) != 1:
+    def get_paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs) -> dict:
+        if sum(i is None for i in (s2_id, arxiv_id)) != 1:
             raise ValueError("Exactly one type of paper ID must be provided.")
 
-        paper_id = s2_paper_id if s2_paper_id is not None else f"arXiv:{arxiv_id}"
-        return self._get(f"/paper/{paper_id}")
+        paper_id = s2_id if s2_id is not None else f"arXiv:{arxiv_id}"
+        return self._get(f"/paper/{paper_id}", **kwargs)
 
-    def get_author(self, s2_author_id: str) -> dict:
-        return self._get(f"/author/{s2_author_id}")
+    def get_author(self, s2_id: str, **kwargs) -> dict:
+        return self._get(f"/author/{s2_id}", **kwargs)
