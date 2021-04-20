@@ -28,7 +28,9 @@ It is possible to override the default settings of the system by creating a conf
       "api_key": "4c02e337-c94b-48b6-b30e-0c06839c81e6"
    },
    "semantic_scholar": {
-      "api_key": "873gd987h3d92873hd9283bnd92"
+      "api_key": "873gd987h3d92873hd9283bnd92",
+      "max_requests": 100,
+      "window_size": 1
    },
    "elasticsearch": {
       "host": {"host": "127.0.0.1", "port": 9200},
