@@ -1,2 +1,4 @@
-requests-cache~=0.6.2
+aiohttp-client-cache~=0.3.0
+aiolimiter~=1.0.0b1
+aiosqlite~=0.17.0
 elasticsearch~=7.11.0

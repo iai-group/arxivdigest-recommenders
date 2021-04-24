@@ -139,4 +139,4 @@ cython_debug/
 
 system_config.json
 
-http_cache.sqlite
+*.sqlite
