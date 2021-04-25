@@ -32,10 +32,6 @@ It is possible to override the default settings of the system by creating a conf
       "max_requests": 100,
       "window_size": 1
    },
-   "elasticsearch": {
-      "host": {"host": "127.0.0.1", "port": 9200},
-      "index": "arxivdigest_articles"
-   },
    "log_level": "FATAL"
 }
 ```

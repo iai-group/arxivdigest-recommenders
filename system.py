@@ -1,106 +1,139 @@
-import json
 import logging
-import os
 import sys
+import asyncio
+from datetime import date
 from typing import List
-from elasticsearch import Elasticsearch
 from arxivdigest.connector import ArxivdigestConnector
 
-from index import run_indexing
-from init_index import init_index
 from semantic_scholar import SemanticScholar
+from util import extract_s2_id, padded_cosine_sim
+import config
 
 
-file_locations = [
-    os.path.expanduser("~") + "/arxivdigest/system_config.json",
-    "/etc/arxivdigest/system_config.json",
-    os.curdir + "/system_config.json",
-]
+class RecommenderSystem:
+    """ArXivDigest recommender system based on venue co-publishing."""
 
+    def __init__(
+        self,
+        s2: SemanticScholar,
+        arxivdigest_connector: ArxivdigestConnector,
+    ):
+        self._s2 = s2
+        self._connector = arxivdigest_connector
+        self._article_ids = self._connector.get_article_ids()
+        self._venues: List[str] = []
 
-def get_config_from_file(file_paths: List[str]):
-    """Checks the given list of file paths for a config file,
-    returns None if not found."""
-    for file_location in file_paths:
-        if os.path.isfile(file_location):
-            print("Found config file at: {}".format(os.path.abspath(file_location)))
-            with open(file_location) as file:
-                return json.load(file)
-    return {}
+    async def get_author_representation(self, s2_id: str, max_paper_age=5) -> List[int]:
+        """Get the vector representation of an author.
 
+        The returned vector is N-dimensional, where N is the number of venues that have been discovered by the
+        recommender thus far. Each value in the vector corresponds to a certain venue and represents the number of
+        times the author has published there.
 
-config_file = get_config_from_file(file_locations)
+        :param s2_id: S2 author ID.
+        :param max_paper_age: Max age (in years) of papers to be considered.
+        :return: Author vector representation.
+        """
+        year_cutoff = date.today().year - max_paper_age
+        author = await self._s2.get_author(s2_id)
+        papers = await asyncio.gather(
+            *[
+                self._s2.get_paper(s2_id=paper["paperId"])
+                for paper in author["papers"]
+                if paper["year"] is None or paper["year"] >= year_cutoff
+            ]
+        )
+        author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
-ARXIVDIGEST_CONFIG = config_file.get("arxivdigest", {})
-ARXIVDIGEST_BASE_URL = ARXIVDIGEST_CONFIG.get(
-    "base_url", "https://api.arxivdigest.org/"
-)
-ARXIVDIGEST_API_KEY = ARXIVDIGEST_CONFIG.get(
-    "api_key", "4c02e337-c94b-48b6-b30e-0c06839c81e6"
-)
-S2_CONFIG = config_file.get("semantic_scholar", {})
-S2_API_KEY = S2_CONFIG.get("api_key")
-S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
-S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
-ELASTICSEARCH_CONFIG = config_file.get("elasticsearch", {})
-ELASTICSEARCH_INDEX = ELASTICSEARCH_CONFIG.get("index", "arxivdigest_articles")
-ELASTICSEARCH_HOST = ELASTICSEARCH_CONFIG.get(
-    "host", {"host": "127.0.0.1", "port": 9200}
-)
+        for venue in author_venues:
+            if venue not in self._venues:
+                self._venues.append(venue)
 
+        return [author_venues.count(venue) for venue in self._venues]
 
-def make_recommendation(es: Elasticsearch, topics, index, n_topics_explanation=3):
-    pass
+    async def gen_user_ranking(self, s2_id: str) -> List[dict]:
+        """Generate article ranking for a single user.
 
+        The score assigned to each article is the cosine similarity between the user and the article author that is
+        most similar to the user.
 
-def create_explanation(es: Elasticsearch, topics):
-    pass
+        :param s2_id: S2 author ID of the user.
+        :return: Ranking of candidate articles.
+        """
+        user = await self.get_author_representation(s2_id)
+        articles = await asyncio.gather(
+            *[
+                self._s2.get_paper(arxiv_id=article_id)
+                for article_id in self._article_ids
+            ]
+        )
+        results = []
+        for article in articles:
+            # TODO: add recommendation explanation
+            authors = await asyncio.gather(
+                *[
+                    self.get_author_representation(author["authorId"])
+                    for author in article["authors"]
+                ]
+            )
+            results.append(
+                {
+                    "article_id": article["arxivId"],
+                    "score": max(padded_cosine_sim(user, author) for author in authors),
+                    "explanation": "",
+                }
+            )
+        return results
 
+    async def gen_recommendations(
+        self, users: dict, interleaved_articles: dict, max_recommendations=10
+    ) -> dict:
+        """Generate recommendations for a user batch.
 
-def make_recommendations(
-    es: Elasticsearch, user_info, interleaved_articles, index, n_articles=10
-):
-    pass
+        :param users: Users.
+        :param interleaved_articles: Interleaved articles that will be excluded from the generated recommendations
+        before submission.
+        :param max_recommendations: Max number of recommendations per user.
+        :return: Recommendations.
+        """
+        recommendations = {}
+        for user_id, user in users.items():
+            s2_id = extract_s2_id(user)
+            if s2_id is None:
+                logger.info(f"User {user_id}: skipped (no S2 ID provided).")
+                continue
+            logger.debug(f"User {user_id} S2 ID: {s2_id}.")
+            user_recommendations = await self.gen_user_ranking(s2_id)
+            user_recommendations = [
+                recommendation
+                for recommendation in user_recommendations
+                if recommendation["article_id"] not in interleaved_articles[user_id]
+            ]
+            user_recommendations = sorted(
+                user_recommendations, key=lambda r: r["score"], reverse=True
+            )
+            recommendations[user_id] = user_recommendations[:max_recommendations]
+            logger.info(
+                f"User {user_id}: recommended {len(recommendations[user_id])} articles."
+            )
+        return recommendations
 
+    async def recommend(self):
+        """Generate and submit recommendations for all users."""
+        total_users = self._connector.get_number_of_users()
+        logger.info(f"Starting recommending articles for {total_users} users")
+        recommendation_count = 0
+        while recommendation_count < total_users:
+            user_ids = self._connector.get_user_ids(recommendation_count)
+            users = self._connector.get_user_info(user_ids)
+            interleaved = self._connector.get_interleaved_articles(user_ids)
 
-def recommend(
-    es: Elasticsearch, arxivdigest_connector: ArxivdigestConnector, index: str
-):
-    """Generate and send recommendations for all users."""
-    total_users = arxivdigest_connector.get_number_of_users()
-    logger.info(f"Starting recommending articles for {total_users} users")
-    recommendation_count = 0
-    while recommendation_count < total_users:
-        user_ids = arxivdigest_connector.get_user_ids(recommendation_count)
-        user_info = arxivdigest_connector.get_user_info(user_ids)
-        interleaved = arxivdigest_connector.get_interleaved_articles(user_ids)
+            recommendations = await self.gen_recommendations(users, interleaved)
 
-        recommendations = make_recommendations(es, user_info, interleaved, index)
-
-        if recommendations:
-            arxivdigest_connector.send_article_recommendations(recommendations)
-        recommendation_count += len(user_ids)
-        logger.info(f"Processed {recommendation_count} users")
-
-
-def run():
-    """Run the recommender system:
-    - Update index with new articles
-    - Fetch user info for all users
-    - Create and send recommendations for each user
-    """
-    es = Elasticsearch(hosts=[ELASTICSEARCH_HOST])
-    arxivdigest_connector = ArxivdigestConnector(
-        ARXIVDIGEST_API_KEY, ARXIVDIGEST_BASE_URL
-    )
-    s2 = SemanticScholar(S2_API_KEY, S2_MAX_REQUESTS, S2_WINDOW_SIZE)
-    if not es.indices.exists(index=ELASTICSEARCH_INDEX):
-        logger.info("Creating index.")
-        init_index(es, ELASTICSEARCH_INDEX)
-    logger.info("Indexing articles from arXivDigest API.")
-    run_indexing(es, ELASTICSEARCH_INDEX, arxivdigest_connector, s2)
-    recommend(es, arxivdigest_connector, ELASTICSEARCH_INDEX)
-    logger.info("\nFinished recommending articles.")
+            if recommendations:
+                self._connector.send_article_recommendations(recommendations)
+            recommendation_count += len(user_ids)
+            logger.info(f"Processed {recommendation_count} users")
 
 
 if __name__ == "__main__":
@@ -117,7 +150,16 @@ if __name__ == "__main__":
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
-    log_level = config_file.get("log_level", "INFO").upper()
+    log_level = config.LOG_LEVEL
     logger.setLevel(log_levels.get(log_level, 20))
 
-    run()
+    arxivdigest_connector = ArxivdigestConnector(
+        config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
+    )
+    s2 = SemanticScholar(
+        config.S2_API_KEY, config.S2_MAX_REQUESTS, config.S2_WINDOW_SIZE
+    )
+    recommender = RecommenderSystem(s2, arxivdigest_connector)
+    asyncio.run(recommender.recommend())
+    s2.close()
+    logger.info("\nFinished recommending articles.")
