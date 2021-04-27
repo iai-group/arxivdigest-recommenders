@@ -1,6 +1,7 @@
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 from aiolimiter import AsyncLimiter
 from datetime import timedelta
+from typing import Optional
 import config
 
 
@@ -26,6 +27,7 @@ class SemanticScholar:
         :param expire_after: Default cache expiration.
         """
         self._expire_after = expire_after
+        self._session: Optional[CachedSession] = None
 
     async def __aenter__(self):
         self._session = CachedSession(
@@ -42,6 +44,7 @@ class SemanticScholar:
     async def _get(self, endpoint: str, **kwargs) -> dict:
         async with self._limiter:
             res = await self._session.get(f"{self._base_url}{endpoint}", **kwargs)
+            res.raise_for_status()
             return await res.json()
 
     async def get_paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
