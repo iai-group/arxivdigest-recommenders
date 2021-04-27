@@ -40,8 +40,10 @@ class RecommenderSystem:
                     s2.get_paper(s2_id=paper["paperId"])
                     for paper in author["papers"]
                     if paper["year"] is None or paper["year"] >= year_cutoff
-                ]
+                ],
+                return_exceptions=True,
             )
+            papers = [paper for paper in papers if not isinstance(paper, Exception)]
             author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
         for venue in author_venues:
@@ -62,8 +64,15 @@ class RecommenderSystem:
         user = await self.get_author_representation(s2_id)
         async with SemanticScholar() as s2:
             articles = await asyncio.gather(
-                *[s2.get_paper(arxiv_id=article_id) for article_id in self._article_ids]
+                *[
+                    s2.get_paper(arxiv_id=article_id)
+                    for article_id in self._article_ids
+                ],
+                return_exceptions=True,
             )
+            articles = [
+                article for article in articles if not isinstance(article, Exception)
+            ]
         results = []
         for article in articles:
             # TODO: add recommendation explanation
@@ -71,8 +80,13 @@ class RecommenderSystem:
                 *[
                     self.get_author_representation(author["authorId"])
                     for author in article["authors"]
-                ]
+                    if author["authorId"]
+                ],
+                return_exceptions=True,
             )
+            authors = [
+                author for author in authors if not isinstance(author, Exception)
+            ]
             results.append(
                 {
                     "article_id": article["arxivId"],
