@@ -15,10 +15,8 @@ class RecommenderSystem:
 
     def __init__(
         self,
-        s2: SemanticScholar,
         arxivdigest_connector: ArxivdigestConnector,
     ):
-        self._s2 = s2
         self._connector = arxivdigest_connector
         self._article_ids = self._connector.get_article_ids()
         self._venues: List[str] = []
@@ -35,15 +33,16 @@ class RecommenderSystem:
         :return: Author vector representation.
         """
         year_cutoff = date.today().year - max_paper_age
-        author = await self._s2.get_author(s2_id)
-        papers = await asyncio.gather(
-            *[
-                self._s2.get_paper(s2_id=paper["paperId"])
-                for paper in author["papers"]
-                if paper["year"] is None or paper["year"] >= year_cutoff
-            ]
-        )
-        author_venues = [paper["venue"] for paper in papers if paper["venue"]]
+        async with SemanticScholar() as s2:
+            author = await s2.get_author(s2_id)
+            papers = await asyncio.gather(
+                *[
+                    s2.get_paper(s2_id=paper["paperId"])
+                    for paper in author["papers"]
+                    if paper["year"] is None or paper["year"] >= year_cutoff
+                ]
+            )
+            author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
         for venue in author_venues:
             if venue not in self._venues:
@@ -61,12 +60,10 @@ class RecommenderSystem:
         :return: Ranking of candidate articles.
         """
         user = await self.get_author_representation(s2_id)
-        articles = await asyncio.gather(
-            *[
-                self._s2.get_paper(arxiv_id=article_id)
-                for article_id in self._article_ids
-            ]
-        )
+        async with SemanticScholar() as s2:
+            articles = await asyncio.gather(
+                *[s2.get_paper(arxiv_id=article_id) for article_id in self._article_ids]
+            )
         results = []
         for article in articles:
             # TODO: add recommendation explanation
@@ -156,10 +153,6 @@ if __name__ == "__main__":
     arxivdigest_connector = ArxivdigestConnector(
         config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
     )
-    s2 = SemanticScholar(
-        config.S2_API_KEY, config.S2_MAX_REQUESTS, config.S2_WINDOW_SIZE
-    )
-    recommender = RecommenderSystem(s2, arxivdigest_connector)
+    recommender = RecommenderSystem(arxivdigest_connector)
     asyncio.run(recommender.recommend())
-    s2.close()
     logger.info("\nFinished recommending articles.")

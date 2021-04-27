@@ -1,31 +1,43 @@
 from aiohttp_client_cache import CachedSession, SQLiteBackend
 from aiolimiter import AsyncLimiter
 from datetime import timedelta
+import config
 
 
 class SemanticScholar:
     """Wrapper for the Semantic Scholar RESTful API."""
 
+    _limiter = AsyncLimiter(
+        config.S2_MAX_REQUESTS,
+        config.S2_WINDOW_SIZE,
+    )
+    _api_key = config.S2_API_KEY
+    _base_url = (
+        "https://partner.semanticscholar.org/v1"
+        if _api_key is not None
+        else "https://api.semanticscholar.org/v1"
+    )
+
     def __init__(
         self,
-        api_key: str = None,
-        max_requests=100,
-        window_size=300,
         expire_after=timedelta(days=7),
     ):
         """
-        :param api_key: API key.
-        :param max_requests: Max number of requests per window.
-        :param window_size: Window size in seconds.
         :param expire_after: Default cache expiration.
         """
-        self._limiter = AsyncLimiter(max_requests, window_size)
-        self._session = CachedSession(cache=SQLiteBackend(expire_after=expire_after))
-        if api_key is not None:
-            self._session.headers.update({"x-api-key": api_key})
-            self._base_url = "https://partner.semanticscholar.org/v1"
-        else:
-            self._base_url = "https://api.semanticscholar.org/v1"
+        self._expire_after = expire_after
+
+    async def __aenter__(self):
+        self._session = CachedSession(
+            cache=SQLiteBackend(expire_after=self._expire_after)
+        )
+        if self._api_key is not None:
+            self._session.headers.update({"x-api-key": self._api_key})
+        return self
+
+    async def __aexit__(self, *err):
+        await self._session.close()
+        self._session = None
 
     async def _get(self, endpoint: str, **kwargs) -> dict:
         async with self._limiter:
@@ -41,6 +53,3 @@ class SemanticScholar:
 
     async def get_author(self, s2_id: str, **kwargs):
         return await self._get(f"/author/{s2_id}", **kwargs)
-
-    async def close(self):
-        await self._session.close()
