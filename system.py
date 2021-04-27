@@ -83,8 +83,11 @@ class RecommenderSystem:
                 f"**{self._venues[i]}**"
                 for i in random.sample(common_venue_indexes, len(common_venue_indexes))
             ][:max_venues]
+            if len(common_venues) > 1:
+                common_venues[-1] = "and " + common_venues[-1]
             return (
-                f"You and {author_name} have both published at {', '.join(common_venues)} during the last "
+                f"You and {author_name} have both published at "
+                f"{(' ' if len(common_venues) < 3 else ', ').join(common_venues)} during the last "
                 f"{self._max_paper_age} years."
             )
         else:
@@ -93,16 +96,16 @@ class RecommenderSystem:
                 key=lambda i: user[i],
                 reverse=True,
             )[:max_venues]
-            venue_explanations = [
+            frequent_venues = [
                 f"{user[i]} times at **{self._venues[i]}**"
                 for i in frequent_venue_indexes
             ]
-            if len(venue_explanations) > 1:
-                venue_explanations[-1] = "and " + venue_explanations[-1]
+            if len(frequent_venues) > 1:
+                frequent_venues[-1] = "and " + frequent_venues[-1]
             return (
-                f"You have published {', '.join(venue_explanations)} during the last {self._max_paper_age} years. "
-                f"{author_name} has also published at "
-                f"{'this venue' if len(venue_explanations) == 1 else 'these venues'} in the same time period."
+                f"You have published {(' ' if len(frequent_venues) < 3 else ', ').join(frequent_venues)} during "
+                f"the last {self._max_paper_age} years. {author_name} has also published at "
+                f"{'this venue' if len(frequent_venues) == 1 else 'these venues'} in the same time period."
             )
 
     async def gen_user_ranking(self, s2_id: str) -> List[dict]:
