@@ -36,6 +36,7 @@ It is possible to override the default settings of the system by creating a conf
       "max_requests": 100,
       "window_size": 1
    },
+   "venue_blacklist": ["arxiv"],
    "log_level": "FATAL"
 }
 ```

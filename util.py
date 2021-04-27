@@ -1,6 +1,6 @@
 import numpy as np
 from urllib.parse import urlparse
-from typing import Optional, List
+from typing import Optional, List, Tuple, Any
 
 
 def extract_s2_id(user: dict) -> Optional[str]:
@@ -13,6 +13,22 @@ def extract_s2_id(user: dict) -> Optional[str]:
     return s2_id if len(s2_id) > 0 else None
 
 
+def pad_shortest(a: list, b: list, pad: Any = 0) -> Tuple[list, list]:
+    """Pad the shortest of two lists in order to make them the same length.
+
+    :param a: Vector a.
+    :param b: Vector b.
+    :param pad: Padding object.
+    :return: Padded vectors.
+    """
+    len_diff = len(a) - len(b)
+    if len_diff > 0:
+        b = b + [pad] * len_diff
+    elif len_diff < 0:
+        a = a + [pad] * abs(len_diff)
+    return a, b
+
+
 def padded_cosine_sim(a: List[int], b: List[int]) -> float:
     """Find the cosine similarity between two vectors. The shortest vector is padded with zeros.
 
@@ -21,10 +37,6 @@ def padded_cosine_sim(a: List[int], b: List[int]) -> float:
     :return: Cosine similarity.
     """
     if sum(a) == 0 or sum(b) == 0:
-        return 0
-    len_diff = len(a) - len(b)
-    if len_diff > 0:
-        b = b + [0] * len_diff
-    elif len_diff < 0:
-        a = a + [0] * abs(len_diff)
+        return 0.0
+    a, b = pad_shortest(a, b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))

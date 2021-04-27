@@ -1,27 +1,31 @@
 import logging
 import sys
 import asyncio
+import random
 from datetime import date
 from typing import List
 from arxivdigest.connector import ArxivdigestConnector
 
 from semantic_scholar import SemanticScholar
-from util import extract_s2_id, padded_cosine_sim
+from util import extract_s2_id, padded_cosine_sim, pad_shortest
 import config
 
 
 class RecommenderSystem:
     """ArXivDigest recommender system based on venue co-publishing."""
 
-    def __init__(
-        self,
-        arxivdigest_connector: ArxivdigestConnector,
-    ):
+    def __init__(self, arxivdigest_connector: ArxivdigestConnector, max_paper_age=5):
+        """
+        :param arxivdigest_connector: ArXivDigest connector.
+        :param max_paper_age: Max age (in years) of papers to consider when when generating author vector
+        representations.
+        """
         self._connector = arxivdigest_connector
+        self._max_paper_age = max_paper_age
         self._article_ids = self._connector.get_article_ids()
         self._venues: List[str] = []
 
-    async def get_author_representation(self, s2_id: str, max_paper_age=5) -> List[int]:
+    async def get_author_representation(self, s2_id: str) -> List[int]:
         """Get the vector representation of an author.
 
         The returned vector is N-dimensional, where N is the number of venues that have been discovered by the
@@ -29,10 +33,9 @@ class RecommenderSystem:
         times the author has published there.
 
         :param s2_id: S2 author ID.
-        :param max_paper_age: Max age (in years) of papers to be considered.
         :return: Author vector representation.
         """
-        year_cutoff = date.today().year - max_paper_age
+        year_cutoff = date.today().year - self._max_paper_age
         async with SemanticScholar() as s2:
             author = await s2.get_author(s2_id)
             papers = await asyncio.gather(
@@ -47,10 +50,55 @@ class RecommenderSystem:
             author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
         for venue in author_venues:
-            if venue not in self._venues:
+            if (
+                venue.lower() not in config.VENUE_BLACKLIST
+                and venue not in self._venues
+            ):
                 self._venues.append(venue)
 
         return [author_venues.count(venue) for venue in self._venues]
+
+    def gen_explanation(
+        self, user: List[int], author: List[int], author_name: str, max_venues=3
+    ):
+        """Generate a recommendation explanation based on the vector representations of a user and an author.
+
+        :param user: User vector representation.
+        :param author: Author vector representation.
+        :param author_name: Author name.
+        :param max_venues: Max number of venues to include in explanation.
+        :return: Explanation.
+        """
+        user, author = pad_shortest(user, author)
+        common_venue_indexes = [
+            i for i, user_count in enumerate(user) if user_count > 0 and author[i] > 0
+        ]
+        if max([user[i] for i in common_venue_indexes]) == 1:
+            common_venues = [
+                f"**{self._venues[i]}**"
+                for i in random.sample(common_venue_indexes, len(common_venue_indexes))
+            ][:max_venues]
+            return (
+                f"You and {author_name} have both published at {', '.join(common_venues)} during the last "
+                f"{self._max_paper_age} years."
+            )
+        else:
+            frequent_venue_indexes = sorted(
+                [i for i in common_venue_indexes if user[i] > 1],
+                key=lambda i: user[i],
+                reverse=True,
+            )[:max_venues]
+            venue_explanations = [
+                f"{user[i]} times at **{self._venues[i]}**"
+                for i in frequent_venue_indexes
+            ]
+            if len(venue_explanations) > 1:
+                venue_explanations[-1] = "and " + venue_explanations[-1]
+            return (
+                f"You have published {', '.join(venue_explanations)} during the last {self._max_paper_age} years. "
+                f"{author_name} has also published at "
+                f"{'this venue' if len(venue_explanations) == 1 else 'these venues'} in the same time period."
+            )
 
     async def gen_user_ranking(self, s2_id: str) -> List[dict]:
         """Generate article ranking for a single user.
@@ -75,7 +123,6 @@ class RecommenderSystem:
             ]
         results = []
         for article in articles:
-            # TODO: add recommendation explanation
             authors = await asyncio.gather(
                 *[
                     self.get_author_representation(author["authorId"])
@@ -85,13 +132,23 @@ class RecommenderSystem:
                 return_exceptions=True,
             )
             authors = [
-                author for author in authors if not isinstance(author, Exception)
+                (author, article["authors"][i]["name"])
+                for i, author in enumerate(authors)
+                if not isinstance(author, Exception)
             ]
+            (similar_author, similar_author_name), score = max(
+                [(author, padded_cosine_sim(user, author[0])) for author in authors],
+                key=lambda t: t[1],
+            )
             results.append(
                 {
                     "article_id": article["arxivId"],
-                    "score": max(padded_cosine_sim(user, author) for author in authors),
-                    "explanation": "",
+                    "score": score,
+                    "explanation": self.gen_explanation(
+                        user, similar_author, similar_author_name
+                    )
+                    if score > 0
+                    else "",
                 }
             )
         return results
@@ -114,14 +171,14 @@ class RecommenderSystem:
                 logger.info(f"User {user_id}: skipped (no S2 ID provided).")
                 continue
             logger.debug(f"User {user_id} S2 ID: {s2_id}.")
-            user_recommendations = await self.gen_user_ranking(s2_id)
-            user_recommendations = [
+            user_ranking = await self.gen_user_ranking(s2_id)
+            user_ranking = [
                 recommendation
-                for recommendation in user_recommendations
+                for recommendation in user_ranking
                 if recommendation["article_id"] not in interleaved_articles[user_id]
             ]
             user_recommendations = sorted(
-                user_recommendations, key=lambda r: r["score"], reverse=True
+                user_ranking, key=lambda r: r["score"], reverse=True
             )
             recommendations[user_id] = user_recommendations[:max_recommendations]
             logger.info(
