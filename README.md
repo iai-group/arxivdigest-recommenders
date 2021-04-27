@@ -2,6 +2,10 @@
 
 ArXivDigest recommender system based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
 
+## Requirements
+
+* Python 3.7+
+
 ## Usage
 
 1. Install dependencies with `pip install -r requirements.txt`.
