@@ -3,7 +3,7 @@ import sys
 import asyncio
 import random
 from datetime import date
-from typing import List
+from typing import List, Dict
 from arxivdigest.connector import ArxivdigestConnector
 
 from semantic_scholar import SemanticScholar
@@ -24,6 +24,7 @@ class RecommenderSystem:
         self._max_paper_age = max_paper_age
         self._article_ids = self._connector.get_article_ids()
         self._venues: List[str] = []
+        self._authors: Dict[str, List[int]] = {}
 
     async def get_author_representation(self, s2_id: str) -> List[int]:
         """Get the vector representation of an author.
@@ -35,28 +36,32 @@ class RecommenderSystem:
         :param s2_id: S2 author ID.
         :return: Author vector representation.
         """
-        year_cutoff = date.today().year - self._max_paper_age
-        async with SemanticScholar() as s2:
-            author = await s2.get_author(s2_id)
-            papers = await asyncio.gather(
-                *[
-                    s2.get_paper(s2_id=paper["paperId"])
-                    for paper in author["papers"]
-                    if paper["year"] is None or paper["year"] >= year_cutoff
-                ],
-                return_exceptions=True,
-            )
+        if s2_id not in self._authors:
+            year_cutoff = date.today().year - self._max_paper_age
+            async with SemanticScholar() as s2:
+                author = await s2.get_author(s2_id)
+                papers = await asyncio.gather(
+                    *[
+                        s2.get_paper(s2_id=paper["paperId"])
+                        for paper in author["papers"]
+                        if paper["year"] is None or paper["year"] >= year_cutoff
+                    ],
+                    return_exceptions=True,
+                )
             papers = [paper for paper in papers if not isinstance(paper, Exception)]
             author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
-        for venue in author_venues:
-            if (
-                venue.lower() not in config.VENUE_BLACKLIST
-                and venue not in self._venues
-            ):
-                self._venues.append(venue)
+            for venue in author_venues:
+                if (
+                    venue.lower() not in config.VENUE_BLACKLIST
+                    and venue not in self._venues
+                ):
+                    self._venues.append(venue)
 
-        return [author_venues.count(venue) for venue in self._venues]
+            self._authors[s2_id] = [
+                author_venues.count(venue) for venue in self._venues
+            ]
+        return self._authors[s2_id]
 
     def gen_explanation(
         self, user: List[int], author: List[int], author_name: str, max_venues=3
@@ -118,9 +123,9 @@ class RecommenderSystem:
                 ],
                 return_exceptions=True,
             )
-            articles = [
-                article for article in articles if not isinstance(article, Exception)
-            ]
+        articles = [
+            article for article in articles if not isinstance(article, Exception)
+        ]
         results = []
         for article in articles:
             authors = await asyncio.gather(
