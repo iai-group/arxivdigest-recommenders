@@ -35,4 +35,5 @@ S2_CONFIG = config_file.get("semantic_scholar", {})
 S2_API_KEY = S2_CONFIG.get("api_key")
 S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
 S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
+S2_CACHE_PATH = S2_CONFIG.get("cache_path", "aiohttp-cache.sqlite")
 VENUE_BLACKLIST = [venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])]

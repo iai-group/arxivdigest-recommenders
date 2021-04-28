@@ -18,20 +18,16 @@ class SemanticScholar:
         if _api_key is not None
         else "https://api.semanticscholar.org/v1"
     )
+    _cache_path = config.S2_CACHE_PATH
 
-    def __init__(
-        self,
-        expire_after=timedelta(days=7),
-    ):
-        """
-        :param expire_after: Default cache expiration.
-        """
-        self._expire_after = expire_after
+    def __init__(self):
         self._session: Optional[CachedSession] = None
 
     async def __aenter__(self):
         self._session = CachedSession(
-            cache=SQLiteBackend(expire_after=self._expire_after)
+            cache=SQLiteBackend(
+                cache_name=self._cache_path, expire_after=timedelta(days=7)
+            )
         )
         if self._api_key is not None:
             self._session.headers.update({"x-api-key": self._api_key})
