@@ -116,7 +116,11 @@ class RecommenderSystem:
         :param s2_id: S2 author ID of the user.
         :return: Ranking of candidate articles.
         """
-        user = await self.get_author_representation(s2_id)
+        try:
+            user = await self.get_author_representation(s2_id)
+        except Exception:
+            logger.error(f"S2 ID {s2_id}: unable to generate author representation.")
+            return []
         async with SemanticScholar() as s2:
             articles = await asyncio.gather(
                 *[
@@ -183,11 +187,13 @@ class RecommenderSystem:
                 recommendation
                 for recommendation in user_ranking
                 if recommendation["article_id"] not in interleaved_articles[user_id]
+                and recommendation["score"] > 0
             ]
             user_recommendations = sorted(
                 user_ranking, key=lambda r: r["score"], reverse=True
             )
-            recommendations[user_id] = user_recommendations[:max_recommendations]
+            if len(user_recommendations) > 0:
+                recommendations[user_id] = user_recommendations[:max_recommendations]
             logger.info(
                 f"User {user_id}: recommended {len(recommendations[user_id])} articles."
             )
