@@ -44,6 +44,15 @@ class SemanticScholar:
             return await res.json()
 
     async def get_paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
+        """Get paper metadata.
+
+        Exactly one type of paper ID must be provided.
+
+        :param s2_id: S2 paper ID.
+        :param arxiv_id: arXiv paper ID.
+        :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
+        :return: Paper metadata.
+        """
         if sum(i is None for i in (s2_id, arxiv_id)) != 1:
             raise ValueError("Exactly one type of paper ID must be provided.")
 
@@ -51,4 +60,10 @@ class SemanticScholar:
         return await self._get(f"/paper/{paper_id}", **kwargs)
 
     async def get_author(self, s2_id: str, **kwargs):
+        """Get author metadata.
+
+        :param s2_id: S2 author ID.
+        :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
+        :return: Author metadata.
+        """
         return await self._get(f"/author/{s2_id}", **kwargs)
