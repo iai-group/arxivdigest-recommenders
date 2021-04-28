@@ -1,5 +1,3 @@
-import logging
-import sys
 import asyncio
 import random
 from datetime import date
@@ -8,6 +6,7 @@ from arxivdigest.connector import ArxivdigestConnector
 
 from semantic_scholar import SemanticScholar
 from util import extract_s2_id, padded_cosine_sim, pad_shortest
+from log import logger
 import config
 
 
@@ -213,22 +212,6 @@ class RecommenderSystem:
 
 
 if __name__ == "__main__":
-    log_levels = {
-        "FATAL": 50,
-        "ERROR": 40,
-        "WARNING": 30,
-        "INFO": 20,
-        "DEBUG": 10,
-    }
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        level=logging.ERROR,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
-    log_level = config.LOG_LEVEL
-    logger.setLevel(log_levels.get(log_level, 20))
-
     arxivdigest_connector = ArxivdigestConnector(
         config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
     )
