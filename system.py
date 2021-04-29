@@ -6,7 +6,12 @@ from typing import List, Dict, Any
 from arxivdigest.connector import ArxivdigestConnector
 
 from semantic_scholar import SemanticScholar
-from util import extract_s2_id, padded_cosine_sim, pad_shortest
+from util import (
+    extract_s2_id,
+    padded_cosine_sim,
+    pad_shortest,
+    gather_exclude_exceptions,
+)
 from log import logger
 import config
 
@@ -51,15 +56,13 @@ class RecommenderSystem:
                 year_cutoff = date.today().year - self._max_paper_age
                 async with SemanticScholar() as s2:
                     author = await s2.get_author(s2_id)
-                    papers = await asyncio.gather(
+                    papers = await gather_exclude_exceptions(
                         *[
                             s2.get_paper(s2_id=paper["paperId"])
                             for paper in author["papers"]
                             if paper["year"] is None or paper["year"] >= year_cutoff
-                        ],
-                        return_exceptions=True,
+                        ]
                     )
-                papers = [paper for paper in papers if not isinstance(paper, Exception)]
                 author_venues = [paper["venue"] for paper in papers if paper["venue"]]
 
                 for venue in author_venues:
@@ -78,18 +81,16 @@ class RecommenderSystem:
         """Generate author representations for each author of each paper that is candidate for recommendation."""
 
         async def get_author_representations(paper: dict):
-            authors = await asyncio.gather(
+            authors = await gather_exclude_exceptions(
                 *[
                     self.get_author_representation(author["authorId"])
                     for author in paper["authors"]
                     if author["authorId"]
-                ],
-                return_exceptions=True,
+                ]
             )
             return [
                 {"name": paper["authors"][i]["name"], "representation": author}
                 for i, author in enumerate(authors)
-                if not isinstance(author, Exception)
             ]
 
         paper_ids = self._connector.get_article_ids()
@@ -97,11 +98,9 @@ class RecommenderSystem:
             f"Generating vector representations of {len(paper_ids)} candidate papers and their authors."
         )
         async with SemanticScholar() as s2:
-            papers = await asyncio.gather(
-                *[s2.get_paper(arxiv_id=paper_id) for paper_id in paper_ids],
-                return_exceptions=True,
+            papers = await gather_exclude_exceptions(
+                *[s2.get_paper(arxiv_id=paper_id) for paper_id in paper_ids]
             )
-        papers = [paper for paper in papers if not isinstance(paper, Exception)]
         paper_authors = await asyncio.gather(
             *[get_author_representations(paper) for paper in papers]
         )
