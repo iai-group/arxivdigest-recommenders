@@ -14,13 +14,14 @@ import config
 class RecommenderSystem:
     """ArXivDigest recommender system based on venue co-publishing."""
 
-    def __init__(self, arxivdigest_connector: ArxivdigestConnector, max_paper_age=5):
+    def __init__(self, max_paper_age=5):
         """
-        :param arxivdigest_connector: ArXivDigest connector.
         :param max_paper_age: Max age (in years) of papers to consider when when generating author vector
         representations.
         """
-        self._connector = arxivdigest_connector
+        self._connector = ArxivdigestConnector(
+            config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
+        )
         self._max_paper_age = max_paper_age
 
         # Stores the names of all discovered venues.
@@ -254,8 +255,5 @@ class RecommenderSystem:
 
 
 if __name__ == "__main__":
-    arxivdigest_connector = ArxivdigestConnector(
-        config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
-    )
-    recommender = RecommenderSystem(arxivdigest_connector)
+    recommender = RecommenderSystem()
     asyncio.run(recommender.recommend())
