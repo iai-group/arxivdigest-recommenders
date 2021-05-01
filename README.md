@@ -8,15 +8,14 @@ Paper and author metadata are retrieved from Semantic Scholar.
 
 * Python 3.7+
 
+
+## Setup
+
+Install dependencies with `pip install -r requirements.txt`.
+
 ## Usage
 
-1. Install dependencies with `pip install -r requirements.txt`.
-1. Fetch the arXivDigest submodule and install the `arxivdigest` package:
-   ```sh
-   git submodule update --init --recursive
-   cd arxivdigest && pip install .
-   ```
-1. Run `python system.py` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+Run `python system.py` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
 
 ### Config
 
