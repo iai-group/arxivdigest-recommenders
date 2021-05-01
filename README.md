@@ -34,31 +34,38 @@ It is possible to override the default settings of the recommender systems by cr
 #### Structure
 
 * `arxivdigest`: arXivDigest API config
-   * `base_url`
-   * `api_key`
+  * `base_url`
+  * `api_key`
 * `semantic_scholar`: Semantic Scholar API config
-   * `api_key`
-   * `max_requests`: max number of requests per window
-   * `window_size`: window size in seconds
-   * `cache_path`: path to SQLite database used to cache responses
-* `venue_blacklist`: (case-insensitive) list of venues that will be ignored by the venue-based recommender
+  * `api_key`
+  * `max_requests`: max number of requests per window
+  * `window_size`: window size in seconds
+  * `cache_path`: path to SQLite database used to cache responses
+* `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
+* `venue_based_recommender`: venue-based recommender config
+  * `max_explanation_venues`: max number of venues to include in explanations
+  * `venue_blacklist`: (case-insensitive) list of venues that will be ignored
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 #### Example
 
 ```json
 {
-   "arxivdigest": {
-      "base_url": "https://api.arxivdigest.org/",
-      "api_key": "4c02e337-c94b-48b6-b30e-0c06839c81e6"
-   },
-   "semantic_scholar": {
-      "api_key": "873gd987h3d92873hd9283bnd92",
-      "max_requests": 100,
-      "window_size": 1,
-      "cache_path": "~/.cache/s2-aiohttp-cache.sqlite"
-   },
-   "venue_blacklist": ["arxiv"],
-   "log_level": "FATAL"
+  "arxivdigest": {
+    "base_url": "https://api.arxivdigest.org/",
+    "api_key": "4c02e337-c94b-48b6-b30e-0c06839c81e6"
+  },
+  "semantic_scholar": {
+    "api_key": "873gd987h3d92873hd9283bnd92",
+    "max_requests": 100,
+    "window_size": 1,
+    "cache_path": "~/.cache/s2-aiohttp-cache.sqlite"
+  },
+  "max_paper_age": 5,
+  "venue_based_recommender":  {
+    "max_explanation_venues": 3,
+    "venue_blacklist": ["arxiv"]
+  },
+  "log_level": "FATAL"
 }
 ```
