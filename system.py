@@ -10,7 +10,7 @@ from util import (
     extract_s2_id,
     padded_cosine_sim,
     pad_shortest,
-    gather_exclude_exceptions,
+    gather,
 )
 from log import logger
 import config
@@ -56,7 +56,7 @@ class RecommenderSystem:
                 year_cutoff = date.today().year - self._max_paper_age
                 async with SemanticScholar() as s2:
                     author = await s2.get_author(s2_id)
-                    papers = await gather_exclude_exceptions(
+                    papers = await gather(
                         *[
                             s2.get_paper(s2_id=paper["paperId"])
                             for paper in author["papers"]
@@ -81,7 +81,7 @@ class RecommenderSystem:
         """Generate author representations for each author of each paper that is candidate for recommendation."""
 
         async def get_author_representations(paper: dict):
-            authors = await gather_exclude_exceptions(
+            authors = await gather(
                 *[
                     self.get_author_representation(author["authorId"])
                     for author in paper["authors"]
@@ -98,7 +98,7 @@ class RecommenderSystem:
             f"Generating vector representations of {len(paper_ids)} candidate papers and their authors."
         )
         async with SemanticScholar() as s2:
-            papers = await gather_exclude_exceptions(
+            papers = await gather(
                 *[s2.get_paper(arxiv_id=paper_id) for paper_id in paper_ids]
             )
         paper_authors = await asyncio.gather(

@@ -43,7 +43,7 @@ def padded_cosine_sim(a: List[int], b: List[int]) -> float:
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
-async def gather_exclude_exceptions(*args):
+async def gather(*args):
     """Wrapper around asyncio.gather that ignores and excludes exceptions."""
     results = await asyncio.gather(*args, return_exceptions=True)
     return [result for result in results if not isinstance(result, Exception)]
