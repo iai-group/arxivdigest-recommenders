@@ -2,7 +2,7 @@ from aiohttp_client_cache import CachedSession, SQLiteBackend
 from aiolimiter import AsyncLimiter
 from datetime import timedelta
 from typing import Optional
-import config
+from arxivdigest_recommenders import config
 
 
 class SemanticScholar:

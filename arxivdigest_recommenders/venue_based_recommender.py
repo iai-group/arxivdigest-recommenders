@@ -5,18 +5,18 @@ from collections import defaultdict
 from typing import List, Dict, Any
 from arxivdigest.connector import ArxivdigestConnector
 
-from semantic_scholar import SemanticScholar
-from util import (
+from arxivdigest_recommenders import config
+from arxivdigest_recommenders.semantic_scholar import SemanticScholar
+from arxivdigest_recommenders.util import (
     extract_s2_id,
     padded_cosine_sim,
     pad_shortest,
     gather,
 )
-from log import logger
-import config
+from arxivdigest_recommenders.log import logger
 
 
-class RecommenderSystem:
+class VenueBasedRecommender:
     """ArXivDigest recommender system based on venue co-publishing."""
 
     def __init__(self, max_paper_age=5):
@@ -254,5 +254,5 @@ class RecommenderSystem:
 
 
 if __name__ == "__main__":
-    recommender = RecommenderSystem()
+    recommender = VenueBasedRecommender()
     asyncio.run(recommender.recommend())

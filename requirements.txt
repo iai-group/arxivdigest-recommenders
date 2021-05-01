@@ -1,5 +1,5 @@
 aiohttp-client-cache~=0.3.0
 aiolimiter~=1.0.0b1
 aiosqlite~=0.17.0
-git+https://github.com/iai-group/arXivDigest.git@d95f8fdb59aedcc282755f81a6081ca65e7d9450
+arxivdigest @ git+https://github.com/iai-group/arXivDigest.git@d95f8fdb59aedcc282755f81a6081ca65e7d9450
 numpy~=1.20.2

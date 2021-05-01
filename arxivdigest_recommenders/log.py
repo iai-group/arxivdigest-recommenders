@@ -1,6 +1,6 @@
 import sys
 import logging
-import config
+from arxivdigest_recommenders import config
 
 
 LOG_LEVELS = {

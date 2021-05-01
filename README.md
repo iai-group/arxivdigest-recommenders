@@ -1,25 +1,32 @@
-# ArXivDigest Recommender
+# ArXivDigest Recommenders
 
-ArXivDigest recommender system based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
+Recommender systems for arXivDigest.
 
 Paper and author metadata are retrieved from Semantic Scholar. 
+
+## Recommenders
+
+There is currently only one recommender available.
+
+### Venue-Based
+
+Recommender based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
 
 ## Requirements
 
 * Python 3.7+
 
-
 ## Setup
 
-Install dependencies with `pip install -r requirements.txt`.
+Install the `arxivdigest_recommenders` package and its dependencies with `pip install .`.
 
 ## Usage
 
-Run `python system.py` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+Run `python -m arxivdigest_recommenders.venue_based_recommender` to run the venue-based recommender. This will generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
 
-### Config
+### Configuration
 
-It is possible to override the default settings of the system by creating a config file in one of the following locations:
+It is possible to override the default settings of the recommender systems by creating a config file in one of the following locations:
 * `~/arxivdigest/system_config.json`
 * `/etc/arxivdigest/system_config.json`
 * `%cwd%/system_config.json`
@@ -34,7 +41,7 @@ It is possible to override the default settings of the system by creating a conf
    * `max_requests`: max number of requests per window
    * `window_size`: window size in seconds
    * `cache_path`: path to SQLite database used to cache responses
-* `venue_blacklist`: (case-insensitive) list of venues to ignore during recommendation
+* `venue_blacklist`: (case-insensitive) list of venues that will be ignored by the venue-based recommender
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 #### Example
