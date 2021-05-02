@@ -34,7 +34,11 @@ class ArxivdigestRecommender(ABC):
     def gen_author_representation(
         self, author: dict, published_papers: List[dict]
     ) -> List[int]:
-        """Generate vector representation of an author based on the author's details and published papers."""
+        """Generate vector representation of an author based on the author's details and published papers.
+
+        :param author: S2 author details.
+        :param published_papers: S2 paper details for the author's published papers.
+        """
         pass
 
     async def get_author_representation(self, s2_id: str) -> List[int]:
