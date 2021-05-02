@@ -18,6 +18,10 @@ class VenueBasedRecommender(ArxivdigestRecommender):
         # Stores the names of all discovered venues.
         self._venues: List[str] = []
 
+    @property
+    def venues(self):
+        return self._venues
+
     def gen_author_representation(
         self, author: dict, published_papers: List[dict]
     ) -> List[int]:
