@@ -2,7 +2,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from datetime import date
 from collections import defaultdict
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
@@ -19,9 +19,7 @@ class ArxivdigestRecommender(ABC):
     """Base class for arXivDigest recommender systems."""
 
     def __init__(self):
-        self._connector = ArxivdigestConnector(
-            config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
-        )
+        self._connector: Optional[ArxivdigestConnector] = None
 
         # Stores the vector representations of the papers (their authors) that are candidate for recommendation.
         self._papers: Dict[str, List[Dict[str, Any]]] = {}
@@ -190,6 +188,10 @@ class ArxivdigestRecommender(ABC):
 
     async def recommend(self):
         """Generate and submit recommendations for all users."""
+        if self._connector is None:
+            self._connector = ArxivdigestConnector(
+                config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
+            )
         total_users = self._connector.get_number_of_users()
         logger.info(f"Recommending papers for {total_users} users.")
         await self._gen_paper_representations()
