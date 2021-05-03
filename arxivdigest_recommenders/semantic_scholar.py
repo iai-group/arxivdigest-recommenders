@@ -12,13 +12,11 @@ class SemanticScholar:
         config.S2_MAX_REQUESTS,
         config.S2_WINDOW_SIZE,
     )
-    _api_key = config.S2_API_KEY
     _base_url = (
         "https://partner.semanticscholar.org/v1"
-        if _api_key is not None
+        if config.S2_API_KEY is not None
         else "https://api.semanticscholar.org/v1"
     )
-    _cache_path = config.S2_CACHE_PATH
 
     def __init__(self):
         self._session: Optional[CachedSession] = None
@@ -26,11 +24,15 @@ class SemanticScholar:
     async def __aenter__(self):
         self._session = CachedSession(
             cache=SQLiteBackend(
-                cache_name=self._cache_path, expire_after=timedelta(days=7)
+                cache_name=config.S2_CACHE_PATH,
+                urls_expire_after={
+                    "*.semanticscholar.org/v1/paper": timedelta(days=30),
+                    "*.semanticscholar.org/v1/author": timedelta(days=7),
+                },
             )
         )
-        if self._api_key is not None:
-            self._session.headers.update({"x-api-key": self._api_key})
+        if config.S2_API_KEY is not None:
+            self._session.headers.update({"x-api-key": config.S2_API_KEY})
         return self
 
     async def __aexit__(self, *err):
@@ -46,7 +48,7 @@ class SemanticScholar:
     async def get_paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
         """Get paper metadata.
 
-        Exactly one type of paper ID must be provided.
+        Exactly one type of paper ID must be provided. The response is cached for 30 days by default.
 
         :param s2_id: S2 paper ID.
         :param arxiv_id: arXiv paper ID.
@@ -61,6 +63,8 @@ class SemanticScholar:
 
     async def get_author(self, s2_id: str, **kwargs):
         """Get author metadata.
+
+        The response is cached for seven days by default.
 
         :param s2_id: S2 author ID.
         :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
