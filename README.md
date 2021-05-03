@@ -27,9 +27,9 @@ Run `python -m arxivdigest_recommenders.venue_based_recommender` to run the venu
 ### Configuration
 
 It is possible to override the default settings of the recommender systems by creating a config file in one of the following locations:
-* `~/arxivdigest/system_config.json`
-* `/etc/arxivdigest/system_config.json`
-* `%cwd%/system_config.json`
+* `~/arxivdigest-recommenders/config.json`
+* `/etc/arxivdigest-recommenders/config.json`
+* `%cwd%/config.json`
 
 #### Structure
 
