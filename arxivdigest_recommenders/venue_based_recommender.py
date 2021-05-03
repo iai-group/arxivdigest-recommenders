@@ -4,9 +4,7 @@ from typing import List
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders import config
-from arxivdigest_recommenders.util import (
-    pad_shortest,
-)
+from arxivdigest_recommenders.util import pad_shortest
 
 
 class VenueBasedRecommender(ArxivdigestRecommender):
