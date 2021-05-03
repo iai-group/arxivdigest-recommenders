@@ -137,6 +137,6 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-system_config.json
+config.json
 
 *.sqlite
