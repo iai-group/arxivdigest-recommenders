@@ -2,15 +2,15 @@
 
 Recommender systems for arXivDigest.
 
-Paper and author metadata are retrieved from Semantic Scholar. 
+The author details and paper metadata used by the recommender systems are retrieved from the [Semantic Scholar API](https://api.semanticscholar.org/). 
 
-## Recommenders
+## Available Recommenders
 
-There is currently only one recommender available.
+At the moment, there is only one recommender available.
 
-### Venue-Based
+### Venue-Based Recommender
 
-Recommender based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
+Based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
 
 ## Requirements
 
@@ -22,16 +22,18 @@ Install the `arxivdigest_recommenders` package and its dependencies with `pip in
 
 ## Usage
 
-Run `python -m arxivdigest_recommenders.venue_based_recommender` to run the venue-based recommender. This will generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+### Venue-Based Recommender
 
-### Configuration
+Run `python -m arxivdigest_recommenders.venue_based_recommender` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+
+## Configuration
 
 It is possible to override the default settings of the recommender systems by creating a config file in one of the following locations:
 * `~/arxivdigest-recommenders/config.json`
 * `/etc/arxivdigest-recommenders/config.json`
 * `%cwd%/config.json`
 
-#### Structure
+### Structure
 
 * `arxivdigest`: arXivDigest API config
   * `base_url`
@@ -47,7 +49,7 @@ It is possible to override the default settings of the recommender systems by cr
   * `venue_blacklist`: (case-insensitive) list of venues that will be ignored
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
-#### Example
+### Example
 
 ```json
 {
