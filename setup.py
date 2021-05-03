@@ -4,7 +4,7 @@ with open("requirements.txt") as file:
     install_requires = file.read().splitlines()
 
 setup(
-    name="arxivdigest_recommenders",
+    name="arxivdigest-recommenders",
     author="Olaf Liadal",
     packages=find_packages(),
     install_requires=install_requires,
