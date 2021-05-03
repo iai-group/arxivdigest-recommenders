@@ -11,7 +11,7 @@ class VenueBasedRecommender(ArxivdigestRecommender):
     """Recommender system based on venue co-publishing."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(config.VENUE_BASED_RECOMMENDER_API_KEY)
 
         # Stores the names of all discovered venues.
         self._venues: List[str] = []

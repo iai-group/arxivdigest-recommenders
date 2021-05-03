@@ -18,7 +18,8 @@ from arxivdigest_recommenders.log import logger
 class ArxivdigestRecommender(ABC):
     """Base class for arXivDigest recommender systems."""
 
-    def __init__(self):
+    def __init__(self, arxivdigest_api_key: str):
+        self._arxivdigest_api_key = arxivdigest_api_key
         self._connector: Optional[ArxivdigestConnector] = None
 
         # Stores the vector representations of the papers (their authors) that are candidate for recommendation.
@@ -194,7 +195,7 @@ class ArxivdigestRecommender(ABC):
         """Generate and submit recommendations for all users."""
         if self._connector is None:
             self._connector = ArxivdigestConnector(
-                config.ARXIVDIGEST_API_KEY, config.ARXIVDIGEST_BASE_URL
+                self._arxivdigest_api_key, config.ARXIVDIGEST_BASE_URL
             )
         total_users = self._connector.get_number_of_users()
         logger.info(f"Recommending papers for {total_users} users.")

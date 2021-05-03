@@ -24,12 +24,8 @@ def get_config_from_file(file_paths: List[str]):
 config_file = get_config_from_file(file_locations)
 
 LOG_LEVEL = config_file.get("log_level", "INFO").upper()
-ARXIVDIGEST_CONFIG = config_file.get("arxivdigest", {})
-ARXIVDIGEST_BASE_URL = ARXIVDIGEST_CONFIG.get(
-    "base_url", "https://api.arxivdigest.org/"
-)
-ARXIVDIGEST_API_KEY = ARXIVDIGEST_CONFIG.get(
-    "api_key", "4c02e337-c94b-48b6-b30e-0c06839c81e6"
+ARXIVDIGEST_BASE_URL = config_file.get(
+    "arxivdigest_base_url", "https://api.arxivdigest.org/"
 )
 S2_CONFIG = config_file.get("semantic_scholar", {})
 S2_API_KEY = S2_CONFIG.get("api_key")
@@ -38,5 +34,8 @@ S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
 S2_CACHE_PATH = S2_CONFIG.get("cache_path", "aiohttp-cache.sqlite")
 MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
 VENUE_CONFIG = config_file.get("venue_based_recommender", {})
-VENUE_BLACKLIST = [venue.lower() for venue in VENUE_CONFIG.get("venue_blacklist", ["arxiv"])]
+VENUE_BASED_RECOMMENDER_API_KEY = VENUE_CONFIG.get("arxivdigest_api_key", "")
+VENUE_BLACKLIST = [
+    venue.lower() for venue in VENUE_CONFIG.get("venue_blacklist", ["arxiv"])
+]
 MAX_EXPLANATION_VENUES = VENUE_CONFIG.get("max_explanation_venues", 3)
