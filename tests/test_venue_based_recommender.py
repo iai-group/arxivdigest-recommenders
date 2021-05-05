@@ -24,7 +24,7 @@ class TestVenueBasedRecommender(unittest.TestCase):
     def setUpClass(cls):
         cls.recommender = VenueBasedRecommender()
         cls.author_representations = [
-            cls.recommender.gen_author_representation(a["author"], a["papers"])
+            cls.recommender.author_representation(a["author"], a["papers"])
             for a in authors
         ]
 
@@ -37,7 +37,7 @@ class TestVenueBasedRecommender(unittest.TestCase):
 
     def test_explanation(self):
         explanations = [
-            self.recommender.gen_explanation(
+            self.recommender.explanation(
                 u, self.author_representations[0], "Author McAuthor"
             )
             for u in user_representations

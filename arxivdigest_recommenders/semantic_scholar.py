@@ -45,7 +45,7 @@ class SemanticScholar:
             res.raise_for_status()
             return await res.json()
 
-    async def get_paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
+    async def paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
         """Get paper metadata.
 
         Exactly one type of paper ID must be provided. The response is cached for 30 days by default.
@@ -61,7 +61,7 @@ class SemanticScholar:
         paper_id = s2_id if s2_id is not None else f"arXiv:{arxiv_id}"
         return await self._get(f"/paper/{paper_id}", **kwargs)
 
-    async def get_author(self, s2_id: str, **kwargs):
+    async def author(self, s2_id: str, **kwargs):
         """Get author metadata.
 
         The response is cached for seven days by default.

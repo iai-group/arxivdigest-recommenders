@@ -32,7 +32,7 @@ class ArxivdigestRecommender(ABC):
         self._author_locks = defaultdict(asyncio.Lock)
 
     @abstractmethod
-    def gen_author_representation(
+    def author_representation(
         self, author: dict, published_papers: List[dict]
     ) -> List[int]:
         """Generate vector representation of an author based on the author's details and published papers.
@@ -56,21 +56,21 @@ class ArxivdigestRecommender(ABC):
             if s2_id not in self._authors:
                 year_cutoff = date.today().year - config.MAX_PAPER_AGE
                 async with SemanticScholar() as s2:
-                    author = await s2.get_author(s2_id)
+                    author = await s2.author(s2_id)
                     papers = await gather(
                         *[
-                            s2.get_paper(s2_id=paper["paperId"])
+                            s2.paper(s2_id=paper["paperId"])
                             for paper in author["papers"]
                             if paper["year"] is None or paper["year"] >= year_cutoff
                         ]
                     )
-                self._authors[s2_id] = self.gen_author_representation(author, papers)
+                self._authors[s2_id] = self.author_representation(author, papers)
         return self._authors[s2_id]
 
     async def _gen_paper_representations(self):
         """Generate author representations for each author of each paper that is candidate for recommendation."""
 
-        async def get_author_representations(paper: dict):
+        async def author_representations(paper: dict):
             authors = await gather(
                 *[
                     self.get_author_representation(author["authorId"])
@@ -89,19 +89,17 @@ class ArxivdigestRecommender(ABC):
         )
         async with SemanticScholar() as s2:
             papers = await gather(
-                *[s2.get_paper(arxiv_id=paper_id) for paper_id in paper_ids]
+                *[s2.paper(arxiv_id=paper_id) for paper_id in paper_ids]
             )
         paper_authors = await asyncio.gather(
-            *[get_author_representations(paper) for paper in papers]
+            *[author_representations(paper) for paper in papers]
         )
         self._papers = {
             paper["arxivId"]: authors for paper, authors in zip(papers, paper_authors)
         }
 
     @abstractmethod
-    def gen_explanation(
-        self, user: List[int], author: List[int], author_name: str
-    ) -> str:
+    def explanation(self, user: List[int], author: List[int], author_name: str) -> str:
         """Generate a recommendation explanation based on the vector representations of a user and an author.
 
         :param user: User vector representation.
@@ -111,7 +109,7 @@ class ArxivdigestRecommender(ABC):
         """
         pass
 
-    async def gen_user_ranking(self, s2_id: str) -> List[Dict[str, Any]]:
+    async def user_ranking(self, s2_id: str) -> List[Dict[str, Any]]:
         """Generate paper ranking for a single user.
 
         The score assigned to each paper is the cosine similarity between the user and the paper author that is
@@ -138,7 +136,7 @@ class ArxivdigestRecommender(ABC):
                 {
                     "article_id": paper_id,
                     "score": score,
-                    "explanation": self.gen_explanation(
+                    "explanation": self.explanation(
                         user, similar_author["representation"], similar_author["name"]
                     )
                     if score > 0
@@ -147,7 +145,7 @@ class ArxivdigestRecommender(ABC):
             )
         return results
 
-    async def gen_recommendations(
+    async def recommendations(
         self, users: dict, interleaved_papers: dict, max_recommendations=10
     ) -> Dict[str, Dict[str, Any]]:
         """Generate recommendations for a user batch.
@@ -159,29 +157,27 @@ class ArxivdigestRecommender(ABC):
         :return: Recommendations.
         """
 
-        async def gen_user_recommendations(user_id: str, user_data: dict):
+        async def user_recommendations(user_id: str, user_data: dict):
             s2_id = extract_s2_id(user_data)
             if s2_id is None:
                 logger.info(f"User {user_id}: skipped (no S2 ID provided).")
                 return []
-            user_ranking = await self.gen_user_ranking(s2_id)
-            user_ranking = [
+            ranking = await self.user_ranking(s2_id)
+            ranking = [
                 recommendation
-                for recommendation in user_ranking
+                for recommendation in ranking
                 if recommendation["article_id"] not in interleaved_papers[user_id]
                 and recommendation["score"] > 0
             ]
-            user_recommendations = sorted(
-                user_ranking, key=lambda r: r["score"], reverse=True
-            )[:max_recommendations]
-            logger.info(
-                f"User {user_id}: recommended {len(user_recommendations)} papers."
-            )
-            return user_recommendations
+            recommendations = sorted(ranking, key=lambda r: r["score"], reverse=True)[
+                :max_recommendations
+            ]
+            logger.info(f"User {user_id}: recommended {len(recommendations)} papers.")
+            return recommendations
 
         recommendations = await asyncio.gather(
             *[
-                gen_user_recommendations(user_id, user_data)
+                user_recommendations(user_id, user_data)
                 for user_id, user_data in users.items()
             ]
         )
@@ -206,7 +202,7 @@ class ArxivdigestRecommender(ABC):
             users = self._connector.get_user_info(user_ids)
             interleaved = self._connector.get_interleaved_articles(user_ids)
 
-            recommendations = await self.gen_recommendations(users, interleaved)
+            recommendations = await self.recommendations(users, interleaved)
 
             if recommendations:
                 self._connector.send_article_recommendations(recommendations)

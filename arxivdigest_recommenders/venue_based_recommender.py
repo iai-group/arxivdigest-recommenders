@@ -20,7 +20,7 @@ class VenueBasedRecommender(ArxivdigestRecommender):
     def venues(self):
         return self._venues
 
-    def gen_author_representation(
+    def author_representation(
         self, author: dict, published_papers: List[dict]
     ) -> List[int]:
         author_venues = [paper["venue"] for paper in published_papers if paper["venue"]]
@@ -32,7 +32,7 @@ class VenueBasedRecommender(ArxivdigestRecommender):
                 self._venues.append(venue)
         return [author_venues.count(venue) for venue in self._venues]
 
-    def gen_explanation(
+    def explanation(
         self, user: List[int], author: List[int], author_name: str
     ) -> str:
         user, author = pad_shortest(user, author)
