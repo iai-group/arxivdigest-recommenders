@@ -37,7 +37,7 @@ def padded_cosine_sim(a: List[int], b: List[int]) -> float:
     :param b: Vector b.
     :return: Cosine similarity.
     """
-    if sum(a) == 0 or sum(b) == 0:
+    if all(v == 0 for v in a) or all(v == 0 for v in b):
         return 0.0
     a, b = pad_shortest(a, b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
