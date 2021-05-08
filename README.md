@@ -8,7 +8,7 @@ The author details and paper metadata used by the recommender systems are retrie
 
 At the moment, there is only one recommender available.
 
-### Venue-Based Recommender
+### Venue Co-Publishing Recommender
 
 Based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
 
@@ -22,9 +22,9 @@ Install the `arxivdigest_recommenders` package and its dependencies with `pip in
 
 ## Usage
 
-### Venue-Based Recommender
+### Venue Co-Publishing Recommender
 
-Run `python -m arxivdigest_recommenders.venue_based_recommender` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+Run `python -m arxivdigest_recommenders.venue_copub` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
 
 ## Configuration
 
@@ -42,10 +42,10 @@ It is possible to override the default settings of the recommender systems by cr
   * `window_size`: window size in seconds
   * `cache_path`: path to SQLite database used to cache responses
 * `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
-* `venue_based_recommender`: venue-based recommender config
+* `venue_blacklist`: (case-insensitive) list of venues that will be when creating venue author vectors
+* `venue_copub_recommender`: venue co-publishing recommender config
   * `arxivdigest_api_key`
   * `max_explanation_venues`: max number of venues to include in explanations
-  * `venue_blacklist`: (case-insensitive) list of venues that will be ignored
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 ### Example
@@ -60,10 +60,10 @@ It is possible to override the default settings of the recommender systems by cr
     "cache_path": "~/.cache/s2-aiohttp-cache.sqlite"
   },
   "max_paper_age": 5,
-  "venue_based_recommender":  {
+  "venue_blacklist": ["arxiv"],
+  "venue_copub_recommender":  {
     "arxivdigest_api_key": "4c02e337-c94b-48b6-b30e-0c06839c81e6",
-    "max_explanation_venues": 3,
-    "venue_blacklist": ["arxiv"]
+    "max_explanation_venues": 3
   },
   "log_level": "FATAL"
 }

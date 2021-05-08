@@ -7,11 +7,7 @@ from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
-from arxivdigest_recommenders.util import (
-    extract_s2_id,
-    padded_cosine_sim,
-    gather,
-)
+from arxivdigest_recommenders.util import extract_s2_id, gather
 from arxivdigest_recommenders.log import logger
 
 
@@ -22,11 +18,11 @@ class ArxivdigestRecommender(ABC):
         self._arxivdigest_api_key = arxivdigest_api_key
         self._connector: Optional[ArxivdigestConnector] = None
 
-        # Stores the vector representations of the papers (their authors) that are candidate for recommendation.
-        self._papers: Dict[str, List[Dict[str, Any]]] = {}
+        # Stores the representations of the authors of the papers that are candidates for recommendation.
+        self._paper_authors: Dict[str, List[Dict[str, Any]]] = {}
 
         # Used as a cache for the vector representations of authors.
-        self._authors: Dict[str, List[int]] = {}
+        self._authors: Dict[str, Dict[str, Any]] = {}
 
         # Locks used to ensure that the vector representation of an author is created only once if missing.
         self._author_locks = defaultdict(asyncio.Lock)
@@ -42,15 +38,11 @@ class ArxivdigestRecommender(ABC):
         """
         pass
 
-    async def get_author_representation(self, s2_id: str) -> List[int]:
-        """Get the vector representation of an author.
-
-        The returned vector is N-dimensional, where N is the number of venues that have been discovered by the
-        recommender thus far. Each value in the vector corresponds to a certain venue and represents the number of
-        times the author has published there.
+    async def get_author(self, s2_id: str) -> Dict[str, Any]:
+        """Get the name, influence, and vector representation of an author.
 
         :param s2_id: S2 author ID.
-        :return: Author vector representation.
+        :return: Author.
         """
         async with self._author_locks[s2_id]:
             if s2_id not in self._authors:
@@ -64,86 +56,49 @@ class ArxivdigestRecommender(ABC):
                             if paper["year"] is None or paper["year"] >= year_cutoff
                         ]
                     )
-                self._authors[s2_id] = self.author_representation(author, papers)
+                self._authors[s2_id] = {
+                    "name": author["name"],
+                    "influence": author["influentialCitationCount"],
+                    "representation": self.author_representation(author, papers),
+                }
         return self._authors[s2_id]
 
-    async def _gen_paper_representations(self):
-        """Generate author representations for each author of each paper that is candidate for recommendation."""
+    async def _init_paper_authors(self):
+        """Get the details of the authors of all papers that are candidates for recommendation."""
 
-        async def author_representations(paper: dict):
-            authors = await gather(
+        async def get_paper_authors(paper: dict):
+            return await gather(
                 *[
-                    self.get_author_representation(author["authorId"])
+                    self.get_author(author["authorId"])
                     for author in paper["authors"]
                     if author["authorId"]
                 ]
             )
-            return [
-                {"name": paper["authors"][i]["name"], "representation": author}
-                for i, author in enumerate(authors)
-            ]
 
         paper_ids = self._connector.get_article_ids()
-        logger.info(
-            f"Generating vector representations of {len(paper_ids)} candidate papers and their authors."
-        )
+        logger.info(f"Getting author details for {len(paper_ids)} candidate papers.")
         async with SemanticScholar() as s2:
             papers = await gather(
                 *[s2.paper(arxiv_id=paper_id) for paper_id in paper_ids]
             )
         paper_authors = await asyncio.gather(
-            *[author_representations(paper) for paper in papers]
+            *[get_paper_authors(paper) for paper in papers]
         )
-        self._papers = {
+        self._paper_authors = {
             paper["arxivId"]: authors for paper, authors in zip(papers, paper_authors)
         }
 
     @abstractmethod
-    def explanation(self, user: List[int], author: List[int], author_name: str) -> str:
-        """Generate a recommendation explanation based on the vector representations of a user and an author.
-
-        :param user: User vector representation.
-        :param author: Author vector representation.
-        :param author_name: Author name.
-        :return: Explanation.
-        """
-        pass
-
-    async def user_ranking(self, s2_id: str) -> List[Dict[str, Any]]:
+    async def user_ranking(
+        self, user: Dict[str, Any], paper_authors: Dict[str, List[Dict[str, Any]]]
+    ) -> List[Dict[str, Any]]:
         """Generate paper ranking for a single user.
 
-        The score assigned to each paper is the cosine similarity between the user and the paper author that is
-        most similar to the user.
-
-        :param s2_id: S2 author ID of the user.
+        :param user: User.
+        :param paper_authors: Author for the papers that are candidates for recommendation.
         :return: Ranking of candidate papers.
         """
-        try:
-            user = await self.get_author_representation(s2_id)
-        except Exception:
-            logger.error(f"S2 ID {s2_id}: unable to generate author representation.")
-            return []
-        results = []
-        for paper_id, authors in self._papers.items():
-            similar_author, score = max(
-                [
-                    (author, padded_cosine_sim(user, author["representation"]))
-                    for author in authors
-                ],
-                key=lambda t: t[1],
-            )
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": self.explanation(
-                        user, similar_author["representation"], similar_author["name"]
-                    )
-                    if score > 0
-                    else "",
-                }
-            )
-        return results
+        pass
 
     async def recommendations(
         self, users: dict, interleaved_papers: dict, max_recommendations=10
@@ -162,7 +117,14 @@ class ArxivdigestRecommender(ABC):
             if s2_id is None:
                 logger.info(f"User {user_id}: skipped (no S2 ID provided).")
                 return []
-            ranking = await self.user_ranking(s2_id)
+            try:
+                user = await self.get_author(s2_id)
+            except Exception:
+                logger.error(
+                    f"User {user_id}: unable to get author details for S2 ID {s2_id}."
+                )
+                return []
+            ranking = await self.user_ranking(user, self._paper_authors)
             ranking = [
                 recommendation
                 for recommendation in ranking
@@ -195,7 +157,7 @@ class ArxivdigestRecommender(ABC):
             )
         total_users = self._connector.get_number_of_users()
         logger.info(f"Recommending papers for {total_users} users.")
-        await self._gen_paper_representations()
+        await self._init_paper_authors()
         recommendation_count = 0
         while recommendation_count < total_users:
             user_ids = self._connector.get_user_ids(recommendation_count)

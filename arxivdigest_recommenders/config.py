@@ -33,9 +33,9 @@ S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
 S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
 S2_CACHE_PATH = S2_CONFIG.get("cache_path", "aiohttp-cache.sqlite")
 MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
-VENUE_CONFIG = config_file.get("venue_based_recommender", {})
-VENUE_BASED_RECOMMENDER_API_KEY = VENUE_CONFIG.get("arxivdigest_api_key", "")
 VENUE_BLACKLIST = [
-    venue.lower() for venue in VENUE_CONFIG.get("venue_blacklist", ["arxiv"])
+    venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])
 ]
-MAX_EXPLANATION_VENUES = VENUE_CONFIG.get("max_explanation_venues", 3)
+VENUE_COPUB_CONFIG = config_file.get("venue_based_recommender", {})
+VENUE_COPUB_API_KEY = VENUE_COPUB_CONFIG.get("arxivdigest_api_key", "")
+MAX_EXPLANATION_VENUES = VENUE_COPUB_CONFIG.get("max_explanation_venues", 3)
