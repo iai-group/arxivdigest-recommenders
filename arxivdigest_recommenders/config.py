@@ -36,6 +36,6 @@ MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
 VENUE_BLACKLIST = [
     venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])
 ]
-VENUE_COPUB_CONFIG = config_file.get("venue_based_recommender", {})
+VENUE_COPUB_CONFIG = config_file.get("venue_copub_recommender", {})
 VENUE_COPUB_API_KEY = VENUE_COPUB_CONFIG.get("arxivdigest_api_key", "")
 MAX_EXPLANATION_VENUES = VENUE_COPUB_CONFIG.get("max_explanation_venues", 3)
