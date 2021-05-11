@@ -18,7 +18,21 @@ Based on the assumption that a paper's relevance to a user is tied to the degree
 
 ## Setup
 
-Install the `arxivdigest_recommenders` package and its dependencies with `pip install .`.
+### Development
+
+Install the `arxivdigest_recommenders` package and its dependencies with `pip install -e .`. The `-e` flag makes the installation editable.
+
+### Production
+
+Install the `arxivdigest_recommenders` package directly from the master branch of this repository:
+```shell
+pip install git+https://github.com/olafapl/arxivdigest_recommenders.git
+```
+
+Updates can be installed with:
+```shell
+pip install --upgrade git+https://github.com/olafapl/arxivdigest_recommenders.git
+```
 
 ## Usage
 
