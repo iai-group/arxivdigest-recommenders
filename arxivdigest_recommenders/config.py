@@ -4,9 +4,9 @@ from typing import List
 
 
 file_locations = [
+    os.curdir + "/config.json",
     os.path.expanduser("~") + "/arxivdigest-recommenders/config.json",
     "/etc/arxivdigest-recommenders/config.json",
-    os.curdir + "/config.json",
 ]
 
 
