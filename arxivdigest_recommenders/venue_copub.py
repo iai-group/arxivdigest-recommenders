@@ -74,6 +74,8 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
     async def user_ranking(self, user, paper_authors):
         results = []
         for paper_id, authors in paper_authors.items():
+            if len(authors) == 0:
+                continue
             similar_author, score = max(
                 [
                     (
