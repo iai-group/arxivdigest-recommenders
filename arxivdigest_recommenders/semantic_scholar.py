@@ -1,7 +1,11 @@
-from aiohttp_client_cache import CachedSession, SQLiteBackend
+import asyncio
+from aiohttp import ClientSession
 from aiolimiter import AsyncLimiter
-from datetime import timedelta
+from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import timedelta, date
+from collections import defaultdict
 from typing import Optional
+
 from arxivdigest_recommenders import config
 
 
@@ -17,20 +21,21 @@ class SemanticScholar:
         if config.S2_API_KEY is not None
         else "https://api.semanticscholar.org/v1"
     )
+    _paper_locks = defaultdict(asyncio.Lock)
+    _author_locks = defaultdict(asyncio.Lock)
+    _sem: Optional[asyncio.Semaphore] = None
+    _n = 0
 
     def __init__(self):
-        self._session: Optional[CachedSession] = None
+        self._session: Optional[ClientSession] = None
+        self._db = AsyncIOMotorClient(config.MONGODB_HOST, config.MONGODB_PORT)[
+            config.S2_CACHE_DB
+        ]
+        if SemanticScholar._sem is None:
+            SemanticScholar._sem = asyncio.Semaphore(2000)
 
     async def __aenter__(self):
-        self._session = CachedSession(
-            cache=SQLiteBackend(
-                cache_name=config.S2_CACHE_PATH,
-                urls_expire_after={
-                    "*.semanticscholar.org/v1/paper": timedelta(days=30),
-                    "*.semanticscholar.org/v1/author": timedelta(days=7),
-                },
-            )
-        )
+        self._session = ClientSession()
         if config.S2_API_KEY is not None:
             self._session.headers.update({"x-api-key": config.S2_API_KEY})
         return self
@@ -40,15 +45,17 @@ class SemanticScholar:
         self._session = None
 
     async def _get(self, endpoint: str, **kwargs) -> dict:
-        async with self._limiter:
-            res = await self._session.get(f"{self._base_url}{endpoint}", **kwargs)
+        async with SemanticScholar._limiter:
+            res = await self._session.get(
+                f"{SemanticScholar._base_url}{endpoint}", **kwargs
+            )
             res.raise_for_status()
             return await res.json()
 
     async def paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
         """Get paper metadata.
 
-        Exactly one type of paper ID must be provided. The response is cached for 30 days by default.
+        Exactly one type of paper ID must be provided. Responses are cached for 30 days.
 
         :param s2_id: S2 paper ID.
         :param arxiv_id: arXiv paper ID.
@@ -59,15 +66,49 @@ class SemanticScholar:
             raise ValueError("Exactly one type of paper ID must be provided.")
 
         paper_id = s2_id if s2_id is not None else f"arXiv:{arxiv_id}"
-        return await self._get(f"/paper/{paper_id}", **kwargs)
+        async with SemanticScholar._sem, SemanticScholar._paper_locks[paper_id]:
+            cached = await self._db.papers.find_one({"_id": paper_id})
+            if (
+                cached
+                and date.fromisoformat(cached["date"])
+                + timedelta(days=config.S2_PAPER_EXPIRATION)
+                >= date.today()
+            ):
+                return cached["data"]
+            paper = {
+                "date": date.today().isoformat(),
+                "data": await self._get(f"/paper/{paper_id}", **kwargs),
+            }
+            if cached:
+                await self._db.papers.replace_one({"_id": paper_id}, paper)
+            else:
+                await self._db.papers.insert_one({"_id": paper_id, **paper})
+            return paper["data"]
 
     async def author(self, s2_id: str, **kwargs):
         """Get author metadata.
 
-        The response is cached for seven days by default.
+        Responses are cached for seven days.
 
         :param s2_id: S2 author ID.
         :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
         :return: Author metadata.
         """
-        return await self._get(f"/author/{s2_id}", **kwargs)
+        async with SemanticScholar._sem, SemanticScholar._author_locks[s2_id]:
+            cached = await self._db.authors.find_one({"_id": s2_id})
+            if (
+                cached
+                and date.fromisoformat(cached["date"])
+                + timedelta(days=config.S2_AUTHOR_EXPIRATION)
+                >= date.today()
+            ):
+                return cached["data"]
+            author = {
+                "date": date.today().isoformat(),
+                "data": await self._get(f"/author/{s2_id}", **kwargs),
+            }
+            if cached:
+                await self._db.authors.replace_one({"_id": s2_id}, author)
+            else:
+                await self._db.authors.insert_one({"_id": s2_id, **author})
+            return author["data"]

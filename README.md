@@ -15,6 +15,7 @@ Based on the assumption that a paper's relevance to a user is tied to the degree
 ## Requirements
 
 * Python 3.7+
+* MongoDB &mdash; Used to cache responses from the Semantic Scholar API
 
 ## Setup
 
@@ -50,11 +51,16 @@ It is possible to override the default settings of the recommender systems by cr
 ### Structure
 
 * `arxivdigest_base_url`
+* `mongodb`
+  * `host`
+  * `port`
 * `semantic_scholar`: Semantic Scholar API config
   * `api_key`
   * `max_requests`: max number of requests per window
   * `window_size`: window size in seconds
-  * `cache_path`: path to SQLite database used to cache responses
+  * `cache_db`: MongoDB database used for caching
+  * `paper_cache_expiration`: expiration time (in days) for paper data
+  * `author_cache_expiration`: expiration time (in days) for author data
 * `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
 * `venue_blacklist`: (case-insensitive) list of venues that will be when creating venue author vectors
 * `venue_copub_recommender`: venue co-publishing recommender config
@@ -67,11 +73,17 @@ It is possible to override the default settings of the recommender systems by cr
 ```json
 {
   "arxivdigest_base_url": "https://api.arxivdigest.org/",
+  "mongodb": {
+    "host": "127.0.0.1",
+    "port": 27017
+  },
   "semantic_scholar": {
     "api_key": "873gd987h3d92873hd9283bnd92",
     "max_requests": 100,
     "window_size": 1,
-    "cache_path": "~/.cache/s2-aiohttp-cache.sqlite"
+    "cache_db": "s2cache",
+    "paper_cache_expiration": 30,
+    "author_cache_expiration": 7
   },
   "max_paper_age": 5,
   "venue_blacklist": ["arxiv"],

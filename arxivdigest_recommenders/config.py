@@ -27,11 +27,16 @@ LOG_LEVEL = config_file.get("log_level", "INFO").upper()
 ARXIVDIGEST_BASE_URL = config_file.get(
     "arxivdigest_base_url", "https://api.arxivdigest.org/"
 )
+MONGODB_CONFIG = config_file.get("mongodb", {})
+MONGODB_HOST = MONGODB_CONFIG.get("host", "127.0.0.1")
+MONGODB_PORT = MONGODB_CONFIG.get("port", 27017)
 S2_CONFIG = config_file.get("semantic_scholar", {})
 S2_API_KEY = S2_CONFIG.get("api_key")
 S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
 S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
-S2_CACHE_PATH = S2_CONFIG.get("cache_path", "aiohttp-cache.sqlite")
+S2_CACHE_DB = S2_CONFIG.get("cache_db", "s2cache")
+S2_PAPER_EXPIRATION = S2_CONFIG.get("paper_cache_expiration", 30)
+S2_AUTHOR_EXPIRATION = S2_CONFIG.get("author_cache_expiration", 7)
 MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
 VENUE_BLACKLIST = [
     venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])
