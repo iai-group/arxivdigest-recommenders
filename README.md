@@ -68,7 +68,7 @@ It is possible to override the default settings of the recommender systems by cr
   * `max_explanation_venues`: max number of venues to include in explanations
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
-### Example
+### Defaults
 
 ```json
 {
@@ -78,9 +78,9 @@ It is possible to override the default settings of the recommender systems by cr
     "port": 27017
   },
   "semantic_scholar": {
-    "api_key": "873gd987h3d92873hd9283bnd92",
+    "api_key": null,
     "max_requests": 100,
-    "window_size": 1,
+    "window_size": 300,
     "cache_db": "s2cache",
     "paper_cache_expiration": 30,
     "author_cache_expiration": 7
@@ -88,9 +88,9 @@ It is possible to override the default settings of the recommender systems by cr
   "max_paper_age": 5,
   "venue_blacklist": ["arxiv"],
   "venue_copub_recommender":  {
-    "arxivdigest_api_key": "4c02e337-c94b-48b6-b30e-0c06839c81e6",
+    "arxivdigest_api_key": null,
     "max_explanation_venues": 3
   },
-  "log_level": "FATAL"
+  "log_level": "INFO"
 }
 ```
