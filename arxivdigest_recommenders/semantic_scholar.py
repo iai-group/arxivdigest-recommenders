@@ -4,8 +4,9 @@ from aiolimiter import AsyncLimiter
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import timedelta, date
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, List
 
+from arxivdigest_recommenders.util import gather
 from arxivdigest_recommenders import config
 
 
@@ -112,3 +113,29 @@ class SemanticScholar:
             else:
                 await self._db.authors.insert_one({"_id": s2_id, **author})
             return author["data"]
+
+    async def paper_authors(self, paper: dict) -> List[dict]:
+        """Get metadata of a paper's authors.
+
+        :param paper: S2 paper metadata.
+        :return: Metadata of paper's authors.
+        """
+        return await gather(
+            *[self.author(author["authorId"]) for author in paper["authors"]]
+        )
+
+    async def author_papers(self, author: dict, max_age: int = None) -> List[dict]:
+        """Get metadata of an author's published papers.
+
+        :param author: S2 author metadata.
+        :param max_age: Max paper age.
+        :return: Metadata of published papers.
+        """
+        min_year = -1 if max_age is None else date.today().year - max_age
+        return await gather(
+            *[
+                self.paper(s2_id=paper["paperId"])
+                for paper in author["papers"]
+                if paper["year"] is None or paper["year"] >= min_year
+            ]
+        )
