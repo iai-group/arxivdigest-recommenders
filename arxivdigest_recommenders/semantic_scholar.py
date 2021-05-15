@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Optional, List
 
 from arxivdigest_recommenders.util import gather
+from arxivdigest_recommenders.log import logger
 from arxivdigest_recommenders import config
 
 
@@ -22,10 +23,10 @@ class SemanticScholar:
         if config.S2_API_KEY is not None
         else "https://api.semanticscholar.org/v1"
     )
-    _paper_locks = defaultdict(asyncio.Lock)
-    _author_locks = defaultdict(asyncio.Lock)
+    _locks = defaultdict(asyncio.Lock)
     _sem: Optional[asyncio.Semaphore] = None
-    _n = 0
+    cache_hits = 0
+    cache_misses = 0
 
     def __init__(self):
         self._session: Optional[ClientSession] = None
@@ -53,66 +54,57 @@ class SemanticScholar:
             res.raise_for_status()
             return await res.json()
 
-    async def paper(self, s2_id: str = None, arxiv_id: str = None, **kwargs):
+    async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
+        async with SemanticScholar._sem, SemanticScholar._locks[endpoint]:
+            try:
+                cached = await self._db[collection].find_one({"_id": endpoint})
+                if cached and date.fromisoformat(cached["expiration"]) >= date.today():
+                    SemanticScholar.cache_hits += 1
+                    return cached["data"]
+                SemanticScholar.cache_misses += 1
+                doc = {
+                    "expiration": (date.today() + timedelta(days=max_age)).isoformat(),
+                    "data": await self._get(endpoint),
+                }
+                if cached:
+                    await self._db[collection].replace_one({"_id": endpoint}, doc)
+                else:
+                    await self._db[collection].insert_one({"_id": endpoint, **doc})
+                return doc["data"]
+            except Exception:
+                logger.warn(f"Semantic Scholar: unable to get endpoint {endpoint}.")
+                raise
+
+    async def paper(self, s2_id: str = None, arxiv_id: str = None):
         """Get paper metadata.
 
-        Exactly one type of paper ID must be provided. Responses are cached for 30 days.
+        Exactly one type of paper ID must be provided.
 
         :param s2_id: S2 paper ID.
         :param arxiv_id: arXiv paper ID.
-        :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
         :return: Paper metadata.
         """
         if sum(i is None for i in (s2_id, arxiv_id)) != 1:
             raise ValueError("Exactly one type of paper ID must be provided.")
 
         paper_id = s2_id if s2_id is not None else f"arXiv:{arxiv_id}"
-        async with SemanticScholar._sem, SemanticScholar._paper_locks[paper_id]:
-            cached = await self._db.papers.find_one({"_id": paper_id})
-            if (
-                cached
-                and date.fromisoformat(cached["date"])
-                + timedelta(days=config.S2_PAPER_EXPIRATION)
-                >= date.today()
-            ):
-                return cached["data"]
-            paper = {
-                "date": date.today().isoformat(),
-                "data": await self._get(f"/paper/{paper_id}", **kwargs),
-            }
-            if cached:
-                await self._db.papers.replace_one({"_id": paper_id}, paper)
-            else:
-                await self._db.papers.insert_one({"_id": paper_id, **paper})
-            return paper["data"]
+        return await self._cached_get(
+            f"/paper/{paper_id}",
+            "papers",
+            config.S2_PAPER_EXPIRATION,
+        )
 
-    async def author(self, s2_id: str, **kwargs):
+    async def author(self, s2_id: str):
         """Get author metadata.
 
-        Responses are cached for seven days.
-
         :param s2_id: S2 author ID.
-        :param kwargs: Additional arguments passed to the get method of the underlying CachedSession.
         :return: Author metadata.
         """
-        async with SemanticScholar._sem, SemanticScholar._author_locks[s2_id]:
-            cached = await self._db.authors.find_one({"_id": s2_id})
-            if (
-                cached
-                and date.fromisoformat(cached["date"])
-                + timedelta(days=config.S2_AUTHOR_EXPIRATION)
-                >= date.today()
-            ):
-                return cached["data"]
-            author = {
-                "date": date.today().isoformat(),
-                "data": await self._get(f"/author/{s2_id}", **kwargs),
-            }
-            if cached:
-                await self._db.authors.replace_one({"_id": s2_id}, author)
-            else:
-                await self._db.authors.insert_one({"_id": s2_id, **author})
-            return author["data"]
+        return await self._cached_get(
+            f"/author/{s2_id}",
+            "authors",
+            config.S2_AUTHOR_EXPIRATION,
+        )
 
     async def paper_authors(self, paper: dict) -> List[dict]:
         """Get metadata of a paper's authors.
@@ -121,7 +113,11 @@ class SemanticScholar:
         :return: Metadata of paper's authors.
         """
         return await gather(
-            *[self.author(author["authorId"]) for author in paper["authors"]]
+            *[
+                self.author(author["authorId"])
+                for author in paper["authors"]
+                if author["authorId"]
+            ]
         )
 
     async def author_papers(self, author: dict, max_age: int = None) -> List[dict]:
@@ -136,6 +132,6 @@ class SemanticScholar:
             *[
                 self.paper(s2_id=paper["paperId"])
                 for paper in author["papers"]
-                if paper["year"] is None or paper["year"] >= min_year
+                if paper["year"] is not None and paper["year"] >= min_year
             ]
         )

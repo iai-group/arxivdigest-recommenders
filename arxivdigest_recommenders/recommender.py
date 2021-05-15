@@ -108,3 +108,7 @@ class ArxivdigestRecommender(ABC):
             recommendation_count += len(user_ids)
             logger.info(f"Processed {recommendation_count} users.")
         logger.info("Finished recommending.")
+        logger.info(
+            f"Semantic Scholar API: {SemanticScholar.cache_hits} cache hits and "
+            f"{SemanticScholar.cache_misses} cache misses."
+        )
