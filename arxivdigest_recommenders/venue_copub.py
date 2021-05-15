@@ -84,10 +84,14 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
             async with SemanticScholar() as s2:
                 paper = await s2.paper(arxiv_id=paper_id)
             author_representations = await asyncio.gather(
-                *[self.author_representation(a["authorId"]) for a in paper["authors"]],
+                *[
+                    self.author_representation(a["authorId"])
+                    for a in paper["authors"]
+                    if a["authorId"]
+                ],
                 return_exceptions=True,
             )
-            if len(author_representations) == 0:
+            if not any(isinstance(a, list) for a in author_representations):
                 continue
             similar_author, similar_author_name, score = max(
                 [
