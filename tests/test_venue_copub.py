@@ -3,18 +3,16 @@ from arxivdigest_recommenders.venue_copub import explanation
 from arxivdigest_recommenders import config
 
 
-authors = [
-    {"name": "Author McAuthor", "representation": [2, 2, 1, 1, 1, 1]},
-    {"name": "Author McAuthor", "representation": [0, 0, 0, 0, 0, 0, 1]},
-]
-
-users = [{"representation": [4, 2, 0, 0, 3, 1]}, {"representation": [1, 1, 0, 0, 0, 0]}]
+authors = [[2, 2, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 1]]
+users = [[4, 2, 0, 0, 3, 1], [1, 1, 0, 0, 0, 0]]
 venues = ["a", "b", "c", "d", "e", "f", "g"]
 
 
 class TestVenueCoPubRecommender(unittest.TestCase):
     def test_explanation(self):
-        explanations = [explanation(venues, u, authors[0]) for u in users]
+        explanations = [
+            explanation(venues, u, authors[0], "Author McAuthor") for u in users
+        ]
         self.assertEqual(
             explanations[0],
             f"You have published 4 times at **a**, 3 times at **e**, and 2 times at **b** during the last "
