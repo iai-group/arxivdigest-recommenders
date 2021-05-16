@@ -1,16 +1,20 @@
-# ArXivDigest Recommenders
+# arXivDigest Recommenders
 
-Recommender systems for arXivDigest.
+Recommender systems for [arXivDigest](https://github.com/iai-group/arXivDigest).
 
 The author details and paper metadata used by the recommender systems are retrieved from the [Semantic Scholar API](https://api.semanticscholar.org/). 
 
 ## Available Recommenders
 
-At the moment, there is only one recommender available.
+There are currently two recommenders available.
 
-### Venue Co-Publishing Recommender
+### Frequent Venues
 
-Based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
+It is not uncommon for researchers to publish numerous papers at the same venue over time. This recommender is based on the assumption that a paper published at a venue that a user frequently publishes at is more relevant to the user than other papers.
+
+### Venue Co-Publishing
+
+This recommender is based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
 
 ## Requirements
 
@@ -37,9 +41,28 @@ pip install --upgrade git+https://github.com/olafapl/arxivdigest_recommenders.gi
 
 ## Usage
 
-### Venue Co-Publishing Recommender
+### Running a Single Recommender
 
-Run `python -m arxivdigest_recommenders.venue_copub` to generate and submit recommendations for all arXivDigest users with known Semantic Scholar author IDs.
+The different recommenders can be run directly by running the modules containing their implementation. As an example, the Frequent Venues recommender can be run by executing `python -m arxivdigest_recommenders.frequent_venues`.
+
+### Running Multiple Recommenders
+
+The Semantic Scholar API rate limit defined in the config file (or the default one of 100 requests per five minute window) works only on a per-process basis, meaning that if two recommenders are run at the same time using the aforementioned method, the effective rate limit will be double that of what we expect. To avoid this problem, run the recommenders in the same process:
+
+```python
+import asyncio
+from arxivdigest_recommenders.frequent_venues import FrequentVenuesRecommender
+from arxivdigest_recommenders.venue_copub import VenueCoPubRecommender
+
+
+async def main():
+    fv = FrequentVenuesRecommender()
+    vc = VenueCoPubRecommender()
+    await asyncio.gather(*[fv.recommend(), vc.recommend()])
+
+
+asyncio.run(main())
+```
 
 ## Configuration
 
@@ -63,7 +86,9 @@ It is possible to override the default settings of the recommender systems by cr
   * `author_cache_expiration`: expiration time (in days) for author data
 * `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
 * `venue_blacklist`: (case-insensitive) list of venues that will be when creating venue author vectors
-* `venue_copub_recommender`: venue co-publishing recommender config
+* `frequent_venues_recommender`: Frequent Venues recomender config
+  * `arxivdigest_api_key`
+* `venue_copub_recommender`: Venue Co-Publishing recommender config
   * `arxivdigest_api_key`
   * `max_explanation_venues`: max number of venues to include in explanations
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
@@ -87,6 +112,9 @@ It is possible to override the default settings of the recommender systems by cr
   },
   "max_paper_age": 5,
   "venue_blacklist": ["arxiv"],
+  "frequent_venues_recommender": {
+    "arxivdigest_api_key": null
+  },
   "venue_copub_recommender":  {
     "arxivdigest_api_key": null,
     "max_explanation_venues": 3
