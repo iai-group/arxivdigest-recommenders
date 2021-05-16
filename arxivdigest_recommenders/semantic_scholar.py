@@ -1,12 +1,11 @@
 import asyncio
-from aiohttp import ClientSession
-from aiolimiter import AsyncLimiter
+from aiohttp import ClientSession, ClientResponseError
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import timedelta, date
 from collections import defaultdict
 from typing import Optional, List
 
-from arxivdigest_recommenders.util import gather
+from arxivdigest_recommenders.util import gather, AsyncRateLimiter
 from arxivdigest_recommenders.log import logger
 from arxivdigest_recommenders import config
 
@@ -14,7 +13,7 @@ from arxivdigest_recommenders import config
 class SemanticScholar:
     """Wrapper for the Semantic Scholar RESTful API."""
 
-    _limiter = AsyncLimiter(
+    _limiter = AsyncRateLimiter(
         config.S2_MAX_REQUESTS,
         config.S2_WINDOW_SIZE,
     )
@@ -27,6 +26,7 @@ class SemanticScholar:
     _sem: Optional[asyncio.Semaphore] = None
     cache_hits = 0
     cache_misses = 0
+    errors = 0
 
     def __init__(self):
         self._session: Optional[ClientSession] = None
@@ -37,7 +37,7 @@ class SemanticScholar:
             SemanticScholar._sem = asyncio.Semaphore(2000)
 
     async def __aenter__(self):
-        self._session = ClientSession()
+        self._session = ClientSession(raise_for_status=True)
         if config.S2_API_KEY is not None:
             self._session.headers.update({"x-api-key": config.S2_API_KEY})
         return self
@@ -51,7 +51,6 @@ class SemanticScholar:
             res = await self._session.get(
                 f"{SemanticScholar._base_url}{endpoint}", **kwargs
             )
-            res.raise_for_status()
             return await res.json()
 
     async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
@@ -66,13 +65,11 @@ class SemanticScholar:
                     "expiration": (date.today() + timedelta(days=max_age)).isoformat(),
                     "data": await self._get(endpoint),
                 }
-                if cached:
-                    await self._db[collection].replace_one({"_id": endpoint}, doc)
-                else:
-                    await self._db[collection].insert_one({"_id": endpoint, **doc})
+                await self._db[collection].replace_one({"_id": endpoint}, doc, upsert=True)
                 return doc["data"]
-            except Exception:
-                logger.warn(f"Semantic Scholar: unable to get endpoint {endpoint}.")
+            except ClientResponseError as e:
+                logger.warn(f"Semantic Scholar ({endpoint}): {e.status} {e.message}.")
+                SemanticScholar.errors += 1
                 raise
 
     async def paper(self, s2_id: str = None, arxiv_id: str = None):
