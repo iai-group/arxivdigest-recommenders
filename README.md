@@ -6,7 +6,10 @@ The author details and paper metadata used by the recommender systems are retrie
 
 ## Available Recommenders
 
-There are currently two recommenders available.
+| **Recommender system** | **Module**           | **Class**                   |
+|------------------------|----------------------|-----------------------------|
+| Frequent Venues        | `frequent_venues.py` | `FrequentVenuesRecommender` |
+| Venue Co-Publishing    | `venue_copub.py`     | `VenueCoPubRecommender`     |
 
 ### Frequent Venues
 
