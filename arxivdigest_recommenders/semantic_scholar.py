@@ -23,7 +23,6 @@ class SemanticScholar:
         else "https://api.semanticscholar.org/v1"
     )
     _locks = defaultdict(asyncio.Lock)
-    _sem: Optional[asyncio.Semaphore] = None
     cache_hits = 0
     cache_misses = 0
     errors = 0
@@ -33,8 +32,6 @@ class SemanticScholar:
         self._db = AsyncIOMotorClient(config.MONGODB_HOST, config.MONGODB_PORT)[
             config.S2_CACHE_DB
         ]
-        if SemanticScholar._sem is None:
-            SemanticScholar._sem = asyncio.Semaphore(2000)
 
     async def __aenter__(self):
         self._session = ClientSession(raise_for_status=True)
@@ -54,7 +51,7 @@ class SemanticScholar:
             return await res.json()
 
     async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
-        async with SemanticScholar._sem, SemanticScholar._locks[endpoint]:
+        async with SemanticScholar._locks[endpoint]:
             try:
                 cached = await self._db[collection].find_one({"_id": endpoint})
                 if cached and date.fromisoformat(cached["expiration"]) >= date.today():
@@ -65,7 +62,9 @@ class SemanticScholar:
                     "expiration": (date.today() + timedelta(days=max_age)).isoformat(),
                     "data": await self._get(endpoint),
                 }
-                await self._db[collection].replace_one({"_id": endpoint}, doc, upsert=True)
+                await self._db[collection].replace_one(
+                    {"_id": endpoint}, doc, upsert=True
+                )
                 return doc["data"]
             except ClientResponseError as e:
                 logger.warn(f"Semantic Scholar ({endpoint}): {e.status} {e.message}.")
