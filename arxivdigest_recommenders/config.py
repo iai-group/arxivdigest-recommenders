@@ -45,3 +45,4 @@ FREQUENT_VENUES_API_KEY = config_file.get("frequent_venues_recommender", {}).get
 VENUE_COPUB_CONFIG = config_file.get("venue_copub_recommender", {})
 VENUE_COPUB_API_KEY = VENUE_COPUB_CONFIG.get("arxivdigest_api_key", "")
 MAX_EXPLANATION_VENUES = VENUE_COPUB_CONFIG.get("max_explanation_venues", 3)
+PREV_CITED_API_KEY = config_file.get("prev_cited_recommender", {}).get("arxivdigest_api_key", "")

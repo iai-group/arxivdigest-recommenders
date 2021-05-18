@@ -10,6 +10,7 @@ The author details and paper metadata used by the recommender systems are retrie
 |------------------------|----------------------|-----------------------------|
 | Frequent Venues        | `frequent_venues.py` | `FrequentVenuesRecommender` |
 | Venue Co-Publishing    | `venue_copub.py`     | `VenueCoPubRecommender`     |
+| Previously Cited | `prev_cited.py` | `PrevCitedRecommender` |
 
 ### Frequent Venues
 
@@ -18,6 +19,10 @@ It is not uncommon for researchers to publish numerous papers at the same venue 
 ### Venue Co-Publishing
 
 This recommender is based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
+
+### Previously Cited
+
+This recommender recommends papers that are published by authors that the user has previously cited.
 
 ## Requirements
 
@@ -94,6 +99,8 @@ It is possible to override the default settings of the recommender systems by cr
 * `venue_copub_recommender`: Venue Co-Publishing recommender config
   * `arxivdigest_api_key`
   * `max_explanation_venues`: max number of venues to include in explanations
+* `prev_cited_recommender`: Previously Cited recomender config
+  * `arxivdigest_api_key`
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 ### Defaults
@@ -121,6 +128,9 @@ It is possible to override the default settings of the recommender systems by cr
   "venue_copub_recommender":  {
     "arxivdigest_api_key": null,
     "max_explanation_venues": 3
+  },
+  "prev_cited_recommender": {
+    "arxivdigest_api_key": null
   },
   "log_level": "INFO"
 }
