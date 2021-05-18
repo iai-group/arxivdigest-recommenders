@@ -1,6 +1,6 @@
 import asyncio
 from collections import defaultdict
-from typing import DefaultDict, Dict
+from typing import DefaultDict
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
@@ -19,11 +19,12 @@ class PrevCitedRecommender(ArxivdigestRecommender):
 
     def __init__(self):
         super().__init__(config.PREV_CITED_API_KEY)
-        self._citation_counts: Dict[str, DefaultDict[str, int]] = {}
+        self._citation_counts: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
 
     async def citation_counts(self, s2_id: str) -> DefaultDict[str, int]:
         if s2_id not in self._citation_counts:
-            self._citation_counts[s2_id] = defaultdict(int)
             async with SemanticScholar() as s2:
                 papers = await s2.author_papers(s2_id=s2_id)
             for paper in papers:

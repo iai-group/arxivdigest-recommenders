@@ -11,6 +11,7 @@ The author details and paper metadata used by the recommender systems are retrie
 | Frequent Venues        | `frequent_venues.py` | `FrequentVenuesRecommender` |
 | Venue Co-Publishing    | `venue_copub.py`     | `VenueCoPubRecommender`     |
 | Previously Cited | `prev_cited.py` | `PrevCitedRecommender` |
+| Previously Cited by Collaborators | `prev_cited_collab.py` | `PrevCitedCollabRecommender` |
 
 ### Frequent Venues
 
@@ -23,6 +24,10 @@ This recommender is based on the assumption that a paper's relevance to a user i
 ### Previously Cited
 
 This recommender recommends papers that are published by authors that the user has previously cited.
+
+### Previously Cited by Collaborators
+
+This recommender is similar to the Previously Cited recommender, but instead of looking at whether the user has cited the authors of a paper, it looks at whether the user's previous collaborators have done so.
 
 ## Requirements
 
@@ -101,6 +106,8 @@ It is possible to override the default settings of the recommender systems by cr
   * `max_explanation_venues`: max number of venues to include in explanations
 * `prev_cited_recommender`: Previously Cited recomender config
   * `arxivdigest_api_key`
+* `prev_cited_collab_recommender`: Previously Cited by Collaborators recomender config
+  * `arxivdigest_api_key`
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 ### Defaults
@@ -130,6 +137,9 @@ It is possible to override the default settings of the recommender systems by cr
     "max_explanation_venues": 3
   },
   "prev_cited_recommender": {
+    "arxivdigest_api_key": null
+  },
+  "prev_cited_collab_recommender": {
     "arxivdigest_api_key": null
   },
   "log_level": "INFO"
