@@ -17,11 +17,13 @@ def explanation(
     venue_index = paper.index(1)
     return (
         f"This article is published at **{venues[venue_index]}**, where you have published {user[venue_index]} "
-        f"{'paper' if user[venue_index] == 1 else 'papers'}."
+        f"{'paper' if user[venue_index] == 1 else 'papers'} in the last {config.MAX_PAPER_AGE} years."
     )
 
 
 class FrequentVenuesRecommender(ArxivdigestRecommender):
+    """Recommender system that recommends papers published at venues that the user has published papers at."""
+
     def __init__(self):
         super().__init__(config.FREQUENT_VENUES_API_KEY)
         self._venues: List[str] = []
