@@ -31,7 +31,7 @@ This recommender is similar to the Previously Cited recommender, but instead of 
 
 ## Requirements
 
-* Python 3.7+
+* Python 3.6+
 * MongoDB &mdash; Used to cache responses from the Semantic Scholar API
 
 ## Setup
