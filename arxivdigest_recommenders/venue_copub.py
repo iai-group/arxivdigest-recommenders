@@ -80,8 +80,11 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
         user_representation = await self.author_representation(user_s2_id)
         results = []
         for paper_id in paper_ids:
-            async with SemanticScholar() as s2:
-                paper = await s2.paper(arxiv_id=paper_id)
+            try:
+                async with SemanticScholar() as s2:
+                    paper = await s2.paper(arxiv_id=paper_id)
+            except Exception:
+                continue
             author_representations = await asyncio.gather(
                 *[
                     self.author_representation(a["authorId"])

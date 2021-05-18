@@ -39,8 +39,11 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
         user_representation = await self.author_representation(user_s2_id)
         results = []
         for paper_id in paper_ids:
-            async with SemanticScholar() as s2:
-                paper = await s2.paper(arxiv_id=paper_id)
+            try:
+                async with SemanticScholar() as s2:
+                    paper = await s2.paper(arxiv_id=paper_id)
+            except Exception:
+                continue
             if not paper["venue"] or paper["venue"] not in self._venues:
                 continue
             paper_representation, user_representation = pad_shortest(

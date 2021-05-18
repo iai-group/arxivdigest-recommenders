@@ -61,6 +61,7 @@ class ArxivdigestRecommender(ABC):
                 logger.error(
                     f"User {user_id}: unable to get author details for S2 ID {s2_id}."
                 )
+                continue
             for batch in chunks(paper_ids, batch_size):
                 batch_user_ranking = await self.user_ranking(user_data, s2_id, batch)
                 batch_user_ranking = [
