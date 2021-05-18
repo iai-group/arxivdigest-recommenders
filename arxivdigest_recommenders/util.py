@@ -2,7 +2,10 @@ import asyncio
 import time
 import numpy as np
 from urllib.parse import urlparse
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Sequence, TypeVar, Iterator
+
+
+T = TypeVar("T")
 
 
 def extract_s2_id(user: dict) -> Optional[str]:
@@ -77,3 +80,13 @@ class AsyncRateLimiter:
 
     async def __aexit__(self, *err):
         pass
+
+
+def chunks(seq: Sequence[T], chunk_size: int) -> Iterator[Sequence[T]]:
+    """Divide a sequence into chunks.
+
+    :param seq: Sequence:
+    :param chunk_size: Chunk size.
+    """
+    for i in range(0, len(seq), chunk_size):
+        yield seq[i : i + chunk_size]

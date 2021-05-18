@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
 from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
-from arxivdigest_recommenders.util import extract_s2_id
+from arxivdigest_recommenders.util import extract_s2_id, chunks
 from arxivdigest_recommenders.log import logger
 
 
@@ -17,7 +17,7 @@ class ArxivdigestRecommender(ABC):
 
     @abstractmethod
     async def user_ranking(
-        self, user: dict, user_s2_id: str, paper_ids: List[str]
+        self, user: dict, user_s2_id: str, paper_ids: Sequence[str]
     ) -> List[dict]:
         """Generate ranking of papers for a user.
 
@@ -32,7 +32,7 @@ class ArxivdigestRecommender(ABC):
         self,
         users: dict,
         interleaved_papers: dict,
-        paper_ids: List[str],
+        paper_ids: Sequence[str],
         max_recommendations=10,
         batch_size=50,
     ) -> Dict[str, Dict[str, Any]]:
@@ -61,8 +61,7 @@ class ArxivdigestRecommender(ABC):
                 logger.error(
                     f"User {user_id}: unable to get author details for S2 ID {s2_id}."
                 )
-            for i in range(0, len(paper_ids), batch_size):
-                batch = paper_ids[i * batch_size : (i + 1) * batch_size]
+            for batch in chunks(paper_ids, batch_size):
                 batch_user_ranking = await self.user_ranking(user_data, s2_id, batch)
                 batch_user_ranking = [
                     r
@@ -93,6 +92,7 @@ class ArxivdigestRecommender(ABC):
             self._arxivdigest_api_key, config.ARXIVDIGEST_BASE_URL
         )
         paper_ids = connector.get_article_ids()
+        logger.info(f"{len(paper_ids)} candidate papers.")
         total_users = connector.get_number_of_users()
         logger.info(f"Recommending papers for {total_users} users.")
         recommendation_count = 0
