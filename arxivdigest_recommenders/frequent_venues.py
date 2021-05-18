@@ -15,7 +15,10 @@ def explanation(
     paper: List[int],
 ) -> str:
     venue_index = paper.index(1)
-    return f"This article is published at {venues[venue_index]}, where you have published {user[venue_index]} papers."
+    return (
+        f"This article is published at **{venues[venue_index]}**, where you have published {user[venue_index]} "
+        f"{'paper' if user[venue_index] == 1 else 'papers'}."
+    )
 
 
 class FrequentVenuesRecommender(ArxivdigestRecommender):
