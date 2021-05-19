@@ -54,7 +54,7 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
             paper_representation, user_representation = pad_shortest(
                 [int(v == paper["venue"]) for v in self._venues], user_representation
             )
-            score = np.dot(paper_representation, user_representation)
+            score = int(np.dot(paper_representation, user_representation))
             results.append(
                 {
                     "article_id": paper_id,
