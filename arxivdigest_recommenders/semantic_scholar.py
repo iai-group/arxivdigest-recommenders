@@ -109,20 +109,6 @@ class SemanticScholar:
             config.S2_AUTHOR_EXPIRATION,
         )
 
-    async def paper_authors(self, paper: dict) -> List[dict]:
-        """Get metadata of a paper's authors.
-
-        :param paper: S2 paper metadata.
-        :return: Metadata of paper's authors.
-        """
-        return await gather(
-            *[
-                self.author(author["authorId"])
-                for author in paper["authors"]
-                if author["authorId"]
-            ]
-        )
-
     async def author_papers(
         self,
         author: dict = None,

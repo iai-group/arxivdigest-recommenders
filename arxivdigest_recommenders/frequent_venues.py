@@ -29,10 +29,6 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
         self._venues: List[str] = []
         self._authors: Dict[str, List[int]] = {}
 
-    @property
-    def venues(self):
-        return self._venues
-
     async def author_representation(self, s2_id: str) -> List[int]:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
