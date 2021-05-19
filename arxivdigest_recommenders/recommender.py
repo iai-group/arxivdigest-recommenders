@@ -35,7 +35,7 @@ class ArxivdigestRecommender(ABC):
         paper_ids: Sequence[str],
         max_recommendations=10,
         batch_size=50,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """Generate recommendations for a user batch.
 
         :param users: Users.
@@ -87,7 +87,7 @@ class ArxivdigestRecommender(ABC):
             if len(user_recommendations) > 0
         }
 
-    async def recommend(self):
+    async def recommend(self) -> Dict[str, List[Dict[str, Any]]]:
         """Generate and submit recommendations for all users."""
         connector = ArxivdigestConnector(
             self._arxivdigest_api_key, config.ARXIVDIGEST_BASE_URL
@@ -97,15 +97,17 @@ class ArxivdigestRecommender(ABC):
         total_users = connector.get_number_of_users()
         logger.info(f"Recommending papers for {total_users} users.")
         recommendation_count = 0
+        recommendations = {}
         while recommendation_count < total_users:
             user_ids = connector.get_user_ids(recommendation_count)
             users = connector.get_user_info(user_ids)
             interleaved = connector.get_interleaved_articles(user_ids)
-
-            recommendations = await self.recommendations(users, interleaved, paper_ids)
-
-            if recommendations:
-                connector.send_article_recommendations(recommendations)
+            batch_recommendations = await self.recommendations(
+                users, interleaved, paper_ids
+            )
+            if batch_recommendations:
+                recommendations.update(batch_recommendations)
+                connector.send_article_recommendations(batch_recommendations)
             recommendation_count += len(user_ids)
             logger.info(f"Processed {recommendation_count} users.")
         logger.info("Finished recommending.")
@@ -113,3 +115,4 @@ class ArxivdigestRecommender(ABC):
             f"Semantic Scholar API: {SemanticScholar.cache_hits} cache hits, "
             f"{SemanticScholar.cache_misses} cache misses, and {SemanticScholar.errors} errors."
         )
+        return recommendations
