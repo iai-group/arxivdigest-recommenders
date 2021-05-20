@@ -30,6 +30,9 @@ ARXIVDIGEST_BASE_URL = config_file.get(
 MONGODB_CONFIG = config_file.get("mongodb", {})
 MONGODB_HOST = MONGODB_CONFIG.get("host", "127.0.0.1")
 MONGODB_PORT = MONGODB_CONFIG.get("port", 27017)
+ELASTICSEARCH_HOST = config_file.get(
+    "elasticsearch", {"host": "127.0.0.1", "port": 9200}
+)
 S2_CONFIG = config_file.get("semantic_scholar", {})
 S2_API_KEY = S2_CONFIG.get("api_key")
 S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
@@ -41,9 +44,19 @@ MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
 VENUE_BLACKLIST = [
     venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])
 ]
-FREQUENT_VENUES_API_KEY = config_file.get("frequent_venues_recommender", {}).get("arxivdigest_api_key", "")
+FREQUENT_VENUES_API_KEY = config_file.get("frequent_venues_recommender", {}).get(
+    "arxivdigest_api_key", ""
+)
 VENUE_COPUB_CONFIG = config_file.get("venue_copub_recommender", {})
 VENUE_COPUB_API_KEY = VENUE_COPUB_CONFIG.get("arxivdigest_api_key", "")
 MAX_EXPLANATION_VENUES = VENUE_COPUB_CONFIG.get("max_explanation_venues", 3)
-PREV_CITED_API_KEY = config_file.get("prev_cited_recommender", {}).get("arxivdigest_api_key", "")
-PREV_CITED_COLLAB_API_KEY = config_file.get("prev_cited_collab_recommender", {}).get("arxivdigest_api_key", "")
+PREV_CITED_API_KEY = config_file.get("prev_cited_recommender", {}).get(
+    "arxivdigest_api_key", ""
+)
+PREV_CITED_COLLAB_API_KEY = config_file.get("prev_cited_collab_recommender", {}).get(
+    "arxivdigest_api_key", ""
+)
+HYBRID_CONFIG = config_file.get("hybrid_recommender", {})
+HYBRID_API_KEY = HYBRID_CONFIG.get("arxivdigest_api_key", "")
+HYBRID_INDEX = HYBRID_CONFIG.get("index", "arxivdigest_papers")
+MAX_EXPLANATION_TOPICS = HYBRID_CONFIG.get("max_explanation_topics", 3)

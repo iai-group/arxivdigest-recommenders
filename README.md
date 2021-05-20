@@ -12,6 +12,7 @@ The author details and paper metadata used by the recommender systems are retrie
 | Venue Co-Publishing    | `venue_copub.py`     | `VenueCoPubRecommender`     |
 | Previously Cited | `prev_cited.py` | `PrevCitedRecommender` |
 | Previously Cited by Collaborators | `prev_cited_collab.py` | `PrevCitedCollabRecommender` |
+| Hybrid: Previously Cited and Topic Search | `hybrid.py` | `HybridRecommender` |
 
 ### Frequent Venues
 
@@ -29,10 +30,15 @@ This recommender recommends papers that are published by authors that the user h
 
 This recommender is similar to the Previously Cited recommender, but instead of looking at whether the user has cited the authors of a paper, it looks at whether the user's previous collaborators have done so.
 
+### Hybrid: Previously Cited and Topic Search
+
+This recommender combines Previously Cited with the approach of the base arXivDigest recommender system, which queries an Elasicsearch index containing the candidate papers for the user's topics of interest.
+
 ## Requirements
 
 * Python 3.6+
 * MongoDB &mdash; Used to cache responses from the Semantic Scholar API
+* Elasticsearch &mdash; Used by the Hybrid recommender for topic search
 
 ## Setup
 
@@ -90,6 +96,9 @@ It is possible to override the default settings of the recommender systems by cr
 * `mongodb`
   * `host`
   * `port`
+* `elasticsearch`
+  * `host`
+  * `port`
 * `semantic_scholar`: Semantic Scholar API config
   * `api_key`
   * `max_requests`: max number of requests per window
@@ -108,6 +117,10 @@ It is possible to override the default settings of the recommender systems by cr
   * `arxivdigest_api_key`
 * `prev_cited_collab_recommender`: Previously Cited by Collaborators recomender config
   * `arxivdigest_api_key`
+* `hybrid_recommender`: Previously Cited by Collaborators recomender config
+  * `arxivdigest_api_key`
+  * `index`: Elasticsearch index for candidate paper indexing and topic search
+  * `max_explanation_topics`: max number of topics to include in explanations
 * `log_level`: either "FATAL", "ERROR", "WARNING", "INFO", or "DEBUG"
 
 ### Defaults
@@ -118,6 +131,10 @@ It is possible to override the default settings of the recommender systems by cr
   "mongodb": {
     "host": "127.0.0.1",
     "port": 27017
+  },
+  "elasticsearch": {
+    "host": "127.0.0.1",
+    "port": 9200
   },
   "semantic_scholar": {
     "api_key": null,
@@ -141,6 +158,11 @@ It is possible to override the default settings of the recommender systems by cr
   },
   "prev_cited_collab_recommender": {
     "arxivdigest_api_key": null
+  },
+  "hybrid_recommender": {
+    "arxivdigest_api_key": null,
+    "index": "arxivdigest_papers",
+    "max_explanation_topics": 3
   },
   "log_level": "INFO"
 }
