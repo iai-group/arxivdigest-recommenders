@@ -27,7 +27,7 @@ class SemanticScholar:
     )
     _db = None
     _locks = defaultdict(asyncio.Lock)
-    _404s = {}
+    _errors = {}
     cache_hits = 0
     cache_misses = 0
     errors = 0
@@ -57,10 +57,10 @@ class SemanticScholar:
             return await res.json()
 
     async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
-        if endpoint in SemanticScholar._404s:
+        if endpoint in SemanticScholar._errors:
             # There's no point in refetching and relogging exceptions for endpoints that have already responded with
-            # 404s, so we just reraise any previous exception.
-            raise SemanticScholar._404s[endpoint]
+            # error codes, so we just reraise any previous exception.
+            raise SemanticScholar._errors[endpoint]
         async with SemanticScholar._locks[endpoint]:
             try:
                 cached = await SemanticScholar._db[collection].find_one(
@@ -81,8 +81,7 @@ class SemanticScholar:
             except ClientResponseError as e:
                 logger.warn(f"{endpoint}: {e.status} {e.message}.")
                 SemanticScholar.errors += 1
-                if e.status == 404:
-                    SemanticScholar._404s[endpoint] = e
+                SemanticScholar._errors[endpoint] = e
                 raise
 
     async def paper(self, s2_id: str = None, arxiv_id: str = None):
