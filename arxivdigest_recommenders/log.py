@@ -10,10 +10,16 @@ LOG_LEVELS = {
     "INFO": 20,
     "DEBUG": 10,
 }
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=logging.ERROR,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
-logger.setLevel(LOG_LEVELS.get(config.LOG_LEVEL, 20))
+
+
+def get_logger(name: str, prefix: str):
+    formatter = logging.Formatter(
+        fmt="%(asctime)s [%(levelname)s] %(prefix)s - %(message)s"
+    )
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger = logging.getLogger(name)
+    logger.setLevel(LOG_LEVELS.get(config.LOG_LEVEL, 20))
+    logger.addHandler(handler)
+    logger = logging.LoggerAdapter(logger, {"prefix": prefix})
+    return logger

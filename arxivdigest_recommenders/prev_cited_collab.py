@@ -20,7 +20,7 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
     collaborators."""
 
     def __init__(self):
-        super().__init__(config.PREV_CITED_COLLAB_API_KEY)
+        super().__init__(config.PREV_CITED_COLLAB_API_KEY, "PrevCitedCollabRecommender")
         self._citation_counts: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )

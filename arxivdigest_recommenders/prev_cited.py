@@ -18,7 +18,7 @@ class PrevCitedRecommender(ArxivdigestRecommender):
     """Recommender system that recommends papers published by authors that the user has previously cited."""
 
     def __init__(self):
-        super().__init__(config.PREV_CITED_API_KEY)
+        super().__init__(config.PREV_CITED_API_KEY, "PrevCitedRecommender")
         self._citation_counts: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )

@@ -6,8 +6,11 @@ from collections import defaultdict
 from typing import Optional, List
 
 from arxivdigest_recommenders.util import gather, AsyncRateLimiter
-from arxivdigest_recommenders.log import logger
+from arxivdigest_recommenders.log import get_logger
 from arxivdigest_recommenders import config
+
+
+logger = get_logger(__name__, "SemanticScholar")
 
 
 class SemanticScholar:
@@ -22,6 +25,7 @@ class SemanticScholar:
         if config.S2_API_KEY is not None
         else "https://api.semanticscholar.org/v1"
     )
+    _db = None
     _locks = defaultdict(asyncio.Lock)
     _404s = {}
     cache_hits = 0
@@ -30,12 +34,13 @@ class SemanticScholar:
 
     def __init__(self):
         self._session: Optional[ClientSession] = None
-        self._db = AsyncIOMotorClient(config.MONGODB_HOST, config.MONGODB_PORT)[
-            config.S2_CACHE_DB
-        ]
 
     async def __aenter__(self):
         self._session = ClientSession(raise_for_status=True)
+        if SemanticScholar._db is None:
+            SemanticScholar._db = AsyncIOMotorClient(
+                config.MONGODB_HOST, config.MONGODB_PORT
+            )[config.S2_CACHE_DB]
         if config.S2_API_KEY is not None:
             self._session.headers.update({"x-api-key": config.S2_API_KEY})
         return self
@@ -58,7 +63,9 @@ class SemanticScholar:
             raise SemanticScholar._404s[endpoint]
         async with SemanticScholar._locks[endpoint]:
             try:
-                cached = await self._db[collection].find_one({"_id": endpoint})
+                cached = await SemanticScholar._db[collection].find_one(
+                    {"_id": endpoint}
+                )
                 if cached and date.fromisoformat(cached["expiration"]) >= date.today():
                     SemanticScholar.cache_hits += 1
                     return cached["data"]
@@ -67,12 +74,12 @@ class SemanticScholar:
                     "expiration": (date.today() + timedelta(days=max_age)).isoformat(),
                     "data": await self._get(endpoint),
                 }
-                await self._db[collection].replace_one(
+                await SemanticScholar._db[collection].replace_one(
                     {"_id": endpoint}, doc, upsert=True
                 )
                 return doc["data"]
             except ClientResponseError as e:
-                logger.warn(f"Semantic Scholar ({endpoint}): {e.status} {e.message}.")
+                logger.warn(f"{endpoint}: {e.status} {e.message}.")
                 SemanticScholar.errors += 1
                 if e.status == 404:
                     SemanticScholar._404s[endpoint] = e

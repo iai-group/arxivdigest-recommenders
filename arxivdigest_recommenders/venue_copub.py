@@ -61,7 +61,7 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
     """Recommender system based on venue co-publishing."""
 
     def __init__(self):
-        super().__init__(config.VENUE_COPUB_API_KEY)
+        super().__init__(config.VENUE_COPUB_API_KEY, "VenueCoPubRecommender")
         self._venues: List[str] = []
         self._authors: Dict[str, List[int]] = {}
 

@@ -25,7 +25,7 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
     """Recommender system that recommends papers published at venues that the user has published papers at."""
 
     def __init__(self):
-        super().__init__(config.FREQUENT_VENUES_API_KEY)
+        super().__init__(config.FREQUENT_VENUES_API_KEY, "FrequentVenuesRecommender")
         self._venues: List[str] = []
         self._authors: Dict[str, List[int]] = {}
 
