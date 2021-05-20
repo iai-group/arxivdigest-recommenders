@@ -43,7 +43,9 @@ class PrevCitedRecommender(ArxivdigestRecommender):
                     paper = await s2.paper(arxiv_id=paper_id)
             except Exception:
                 continue
-            if len(paper["authors"]) == 0:
+            if len(paper["authors"]) == 0 or user_s2_id in [
+                a["authorId"] for a in paper["authors"]
+            ]:
                 continue
             most_cited_author = max(
                 paper["authors"], key=lambda a: citation_counts[a["authorId"]]

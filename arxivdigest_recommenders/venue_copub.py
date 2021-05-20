@@ -81,6 +81,8 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
                     paper = await s2.paper(arxiv_id=paper_id)
             except Exception:
                 continue
+            if user_s2_id in [a["authorId"] for a in paper["authors"]]:
+                continue
             author_representations = await asyncio.gather(
                 *[
                     self.author_representation(a["authorId"])

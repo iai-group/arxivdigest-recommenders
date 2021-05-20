@@ -56,7 +56,9 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
                     paper = await s2.paper(arxiv_id=paper_id)
             except Exception:
                 continue
-            if len(paper["authors"]) == 0:
+            if len(paper["authors"]) == 0 or user_s2_id in [
+                a["authorId"] for a in paper["authors"]
+            ]:
                 continue
             score = 0
             most_cited_author = None
