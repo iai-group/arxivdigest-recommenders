@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from typing import List, Dict, Any, Sequence
 from arxivdigest.connector import ArxivdigestConnector
 
@@ -35,7 +34,6 @@ class ArxivdigestRecommender(ABC):
         interleaved_papers: dict,
         paper_ids: Sequence[str],
         max_recommendations=10,
-        batch_size=50,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Generate recommendations for a user batch.
 
@@ -44,11 +42,9 @@ class ArxivdigestRecommender(ABC):
         before submission.
         :param paper_ids: arXiv IDs of candidate papers.
         :param max_recommendations: Max number of recommendations per user.
-        :param batch_size: User recommendations are generated in batches of candidate papers. This is the number of
-        papers used in each batch.
         :return: Recommendations.
         """
-        user_rankings = defaultdict(list)
+        user_rankings = {}
         for user_id, user_data in users.items():
             s2_id = extract_s2_id(user_data)
             if s2_id is None:
@@ -63,15 +59,12 @@ class ArxivdigestRecommender(ABC):
                     f"User {user_id}: unable to get author details for S2 ID {s2_id}."
                 )
                 continue
-            for batch in chunks(paper_ids, batch_size):
-                batch_user_ranking = await self.user_ranking(user_data, s2_id, batch)
-                batch_user_ranking = [
-                    r
-                    for r in batch_user_ranking
-                    if r["article_id"] not in interleaved_papers[user_id]
-                    and r["score"] > 0
-                ]
-                user_rankings[user_id].extend(batch_user_ranking)
+            user_ranking = await self.user_ranking(user_data, s2_id, paper_ids)
+            user_rankings[user_id] = [
+                r
+                for r in user_ranking
+                if r["article_id"] not in interleaved_papers[user_id] and r["score"] > 0
+            ]
         recommendations = {
             user_id: sorted(user_ranking, key=lambda r: r["score"], reverse=True)[
                 :max_recommendations
