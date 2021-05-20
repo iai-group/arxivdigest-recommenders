@@ -5,7 +5,7 @@ from typing import List, Dict
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
 from arxivdigest_recommenders.author_representation import venue_author_representation
-from arxivdigest_recommenders.util import pad_shortest, padded_cosine_sim, gather
+from arxivdigest_recommenders.util import pad_shortest, padded_cosine_sim
 from arxivdigest_recommenders import config
 
 
@@ -20,13 +20,11 @@ def explanation(
     :param author_name: Author name.
     :return: Explanation.
     """
-    user_representation, author_representation = pad_shortest(user, author)
+    user, author = pad_shortest(user, author)
     common_venue_indexes = [
-        i
-        for i, user_count in enumerate(user_representation)
-        if user_count > 0 and author_representation[i] > 0
+        i for i, user_count in enumerate(user) if user_count > 0 and author[i] > 0
     ]
-    if max([user_representation[i] for i in common_venue_indexes]) == 1:
+    if max([user[i] for i in common_venue_indexes]) == 1:
         common_venues = [
             f"**{venues[i]}**"
             for i in random.sample(common_venue_indexes, len(common_venue_indexes))
@@ -35,23 +33,22 @@ def explanation(
             common_venues[-1] = "and " + common_venues[-1]
         return (
             f"You and {author_name} have both published at "
-            f"{(' ' if len(common_venues) < 3 else ', ').join(common_venues)} during the last "
+            f"{(' ' if len(common_venues) < 3 else ', ').join(common_venues)} in the last "
             f"{config.MAX_PAPER_AGE} years."
         )
     else:
         frequent_venue_indexes = sorted(
-            [i for i in common_venue_indexes if user_representation[i] > 1],
-            key=lambda i: user_representation[i],
+            [i for i in common_venue_indexes if user[i] > 1],
+            key=lambda i: user[i],
             reverse=True,
         )[: config.MAX_EXPLANATION_VENUES]
         frequent_venues = [
-            f"{user_representation[i]} times at **{venues[i]}**"
-            for i in frequent_venue_indexes
+            f"{user[i]} times at **{venues[i]}**" for i in frequent_venue_indexes
         ]
         if len(frequent_venues) > 1:
             frequent_venues[-1] = "and " + frequent_venues[-1]
         return (
-            f"You have published {(' ' if len(frequent_venues) < 3 else ', ').join(frequent_venues)} during "
+            f"You have published {(' ' if len(frequent_venues) < 3 else ', ').join(frequent_venues)} in "
             f"the last {config.MAX_PAPER_AGE} years. {author_name} has also published at "
             f"{'this venue' if len(frequent_venues) == 1 else 'these venues'} in the same time period."
         )

@@ -10,6 +10,7 @@ The author details and paper metadata used by the recommender systems are retrie
 |------------------------|----------------------|-----------------------------|
 | Frequent Venues        | `frequent_venues.py` | `FrequentVenuesRecommender` |
 | Venue Co-Publishing    | `venue_copub.py`     | `VenueCoPubRecommender`     |
+| Weighted Influence | `weighted_inf.py` | `WeightedInfRecommender` |
 | Previously Cited | `prev_cited.py` | `PrevCitedRecommender` |
 | Previously Cited by Collaborators | `prev_cited_collab.py` | `PrevCitedCollabRecommender` |
 | Hybrid: Previously Cited and Topic Search | `hybrid.py` | `HybridRecommender` |
@@ -21,6 +22,10 @@ It is not uncommon for researchers to publish numerous papers at the same venue 
 ### Venue Co-Publishing
 
 This recommender is based on the assumption that a paper's relevance to a user is tied to the degree of venue co-publishing between the paper's authors and the user: a paper is relevant to a user if the authors of the paper publish at the same venues as the user. 
+
+### Weighted Influence
+
+This recommender is similar to the Venue Co-Publishing recommender. It does not only look at the co-publishing patterns of the user and the authors of a paper, but also takes into consideration the influential citation counts of the authors.
 
 ### Previously Cited
 
@@ -107,12 +112,15 @@ It is possible to override the default settings of the recommender systems by cr
   * `paper_cache_expiration`: expiration time (in days) for paper data
   * `author_cache_expiration`: expiration time (in days) for author data
 * `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
+* `max_explanation_venues`: max number of venues to include in explanations (used by the Venue Co-Publishing and Weighted Influence recommenders)
 * `venue_blacklist`: (case-insensitive) list of venues that will be when creating venue author vectors
 * `frequent_venues_recommender`: Frequent Venues recomender config
   * `arxivdigest_api_key`
 * `venue_copub_recommender`: Venue Co-Publishing recommender config
   * `arxivdigest_api_key`
-  * `max_explanation_venues`: max number of venues to include in explanations
+* `weighted_inf_recommender`: Weighted Influence recomender config
+  * `arxivdigest_api_key`
+  * `min_influence`: minimum influential citation count for authors
 * `prev_cited_recommender`: Previously Cited recomender config
   * `arxivdigest_api_key`
 * `prev_cited_collab_recommender`: Previously Cited by Collaborators recomender config
@@ -145,13 +153,17 @@ It is possible to override the default settings of the recommender systems by cr
     "author_cache_expiration": 7
   },
   "max_paper_age": 5,
+  "max_explanation_venues": 3,
   "venue_blacklist": ["arxiv"],
   "frequent_venues_recommender": {
     "arxivdigest_api_key": null
   },
   "venue_copub_recommender":  {
+    "arxivdigest_api_key": null
+  },
+  "weighted_inf_recommender": {
     "arxivdigest_api_key": null,
-    "max_explanation_venues": 3
+    "min_influence": 20
   },
   "prev_cited_recommender": {
     "arxivdigest_api_key": null

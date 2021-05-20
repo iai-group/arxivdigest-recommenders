@@ -41,6 +41,7 @@ S2_CACHE_DB = S2_CONFIG.get("cache_db", "s2cache")
 S2_PAPER_EXPIRATION = S2_CONFIG.get("paper_cache_expiration", 30)
 S2_AUTHOR_EXPIRATION = S2_CONFIG.get("author_cache_expiration", 7)
 MAX_PAPER_AGE = config_file.get("max_paper_age", 5)
+MAX_EXPLANATION_VENUES = config_file.get("max_explanation_venues", 3)
 VENUE_BLACKLIST = [
     venue.lower() for venue in config_file.get("venue_blacklist", ["arxiv"])
 ]
@@ -49,7 +50,9 @@ FREQUENT_VENUES_API_KEY = config_file.get("frequent_venues_recommender", {}).get
 )
 VENUE_COPUB_CONFIG = config_file.get("venue_copub_recommender", {})
 VENUE_COPUB_API_KEY = VENUE_COPUB_CONFIG.get("arxivdigest_api_key", "")
-MAX_EXPLANATION_VENUES = VENUE_COPUB_CONFIG.get("max_explanation_venues", 3)
+WEIGHTED_INF_CONFIG = config_file.get("weighted_inf_recommender", {})
+WEIGHTED_INF_API_KEY = WEIGHTED_INF_CONFIG.get("arxivdigest_api_key", "")
+WEIGHTED_INF_MIN_INFLUENCE = WEIGHTED_INF_CONFIG.get("min_influence", 20)
 PREV_CITED_API_KEY = config_file.get("prev_cited_recommender", {}).get(
     "arxivdigest_api_key", ""
 )
