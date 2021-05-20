@@ -65,15 +65,12 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
             citer = None
             for collaborator_id, collaborator in collaborators.items():
                 citation_counts = await self.citation_counts(collaborator_id)
-                authors = [
-                    a
-                    for a in paper["authors"]
-                    if a["authorId"] != collaborator["authorId"]
-                ]
-                if len(authors) == 0:
+                if collaborator["authorId"] in [
+                    a["authorId"] for a in paper["authors"]
+                ]:
                     continue
                 collaborator_most_cited_author = max(
-                    authors,
+                    paper["authors"],
                     key=lambda a: citation_counts[a["authorId"]],
                 )
                 collaborator_score = citation_counts[
