@@ -87,8 +87,14 @@ class ArxivdigestRecommender(ABC):
             if len(user_recommendations) > 0
         }
 
-    async def recommend(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Generate and submit recommendations for all users."""
+    async def recommend(
+        self, submit_recommendations=True
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Generate and submit recommendations for all users.
+
+        :param submit_recommendations: Submit recommendations to arXivDigest.
+        :return: Recommendations.
+        """
         connector = ArxivdigestConnector(
             self._arxivdigest_api_key, config.ARXIVDIGEST_BASE_URL
         )
@@ -105,8 +111,8 @@ class ArxivdigestRecommender(ABC):
             batch_recommendations = await self.recommendations(
                 users, interleaved, paper_ids
             )
-            if batch_recommendations:
-                recommendations.update(batch_recommendations)
+            recommendations.update(batch_recommendations)
+            if batch_recommendations and submit_recommendations:
                 connector.send_article_recommendations(batch_recommendations)
             recommendation_count += len(user_ids)
             logger.info(f"Processed {recommendation_count} users.")
