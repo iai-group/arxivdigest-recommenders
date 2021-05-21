@@ -111,9 +111,9 @@ It is possible to override the default settings of the recommender systems by cr
   * `cache_db`: MongoDB database used for caching
   * `paper_cache_expiration`: expiration time (in days) for paper data
   * `author_cache_expiration`: expiration time (in days) for author data
-* `max_paper_age`: max age (in years) of papers published by an author to consider when generating the author's vector representation
+* `max_paper_age`: papers older than this (in years) are filtered out when looking at an author's published papers
 * `max_explanation_venues`: max number of venues to include in explanations (used by the Venue Co-Publishing and Weighted Influence recommenders)
-* `venue_blacklist`: (case-insensitive) list of venues that will be when creating venue author vectors
+* `venue_blacklist`: (case-insensitive) list of venues to ignore
 * `frequent_venues_recommender`: Frequent Venues recomender config
   * `arxivdigest_api_key`
 * `venue_copub_recommender`: Venue Co-Publishing recommender config
