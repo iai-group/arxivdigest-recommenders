@@ -28,6 +28,7 @@ class SemanticScholar:
     _db = None
     _locks = defaultdict(asyncio.Lock)
     _errors = {}
+    requests = 0
     cache_hits = 0
     cache_misses = 0
     errors = 0
@@ -54,6 +55,9 @@ class SemanticScholar:
             res = await self._session.get(
                 f"{SemanticScholar._base_url}{endpoint}", **kwargs
             )
+            SemanticScholar.requests += 1
+            if SemanticScholar.requests % 100 == 0:
+                logger.debug("Requests/errors: %d/%d", SemanticScholar.requests, SemanticScholar.errors)
             return await res.json()
 
     async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
@@ -79,7 +83,7 @@ class SemanticScholar:
                 )
                 return doc["data"]
             except ClientResponseError as e:
-                logger.warn(f"{endpoint}: {e.status} {e.message}.")
+                logger.warn("%s: %s %s.", endpoint, e.status, e.message)
                 SemanticScholar.errors += 1
                 SemanticScholar._errors[endpoint] = e
                 raise

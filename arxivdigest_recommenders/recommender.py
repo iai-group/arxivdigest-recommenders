@@ -48,7 +48,7 @@ class ArxivdigestRecommender(ABC):
         for user_id, user_data in users.items():
             s2_id = extract_s2_id(user_data)
             if s2_id is None:
-                self._logger.info(f"User {user_id}: skipped (no S2 ID provided).")
+                self._logger.info("User %s: skipped (no S2 ID provided).", user_id)
                 continue
             try:
                 # Validate the user's S2 ID.
@@ -56,7 +56,7 @@ class ArxivdigestRecommender(ABC):
                     await s2.author(s2_id)
             except Exception:
                 self._logger.error(
-                    f"User {user_id}: unable to get author details for S2 ID {s2_id}."
+                    "User %: unable to get author details for S2 ID %s.", user_id, s2_id
                 )
                 continue
             user_ranking = await self.user_ranking(user_data, s2_id, paper_ids)
@@ -73,7 +73,7 @@ class ArxivdigestRecommender(ABC):
         }
         for user_id, user_recommendations in recommendations.items():
             self._logger.info(
-                f"User {user_id}: recommended {len(user_recommendations)} papers."
+                "User %s: recommended %d papers.", user_id, len(user_recommendations)
             )
         return {
             user_id: user_recommendations
@@ -94,7 +94,9 @@ class ArxivdigestRecommender(ABC):
         )
         paper_ids = connector.get_article_ids()
         total_users = connector.get_number_of_users()
-        self._logger.info(f"{len(paper_ids)} candidate papers and {total_users} users.")
+        self._logger.info(
+            "%d candidate papers and %d users.", len(paper_ids), total_users
+        )
         recommendation_count = 0
         recommendations = {}
         while recommendation_count < total_users:
@@ -108,10 +110,13 @@ class ArxivdigestRecommender(ABC):
             if batch_recommendations and submit_recommendations:
                 connector.send_article_recommendations(batch_recommendations)
             recommendation_count += len(user_ids)
-            self._logger.info(f"Processed {recommendation_count} users.")
+            self._logger.info("Processed %d users.", recommendation_count)
         self._logger.info("Finished recommending.")
         self._logger.info(
-            f"Semantic Scholar API: {SemanticScholar.cache_hits} cache hits, "
-            f"{SemanticScholar.cache_misses} cache misses, and {SemanticScholar.errors} errors."
+            "Semantic Scholar API: %d cache hits, %d cache misses, %d requests, and %d errors.",
+            SemanticScholar.cache_hits,
+            SemanticScholar.cache_misses,
+            SemanticScholar.requests,
+            SemanticScholar.errors,
         )
         return recommendations
