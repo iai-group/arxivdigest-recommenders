@@ -4,7 +4,7 @@ from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
-from arxivdigest_recommenders.util import extract_s2_id, chunks
+from arxivdigest_recommenders.util import extract_s2_id
 from arxivdigest_recommenders.log import get_logger
 
 
@@ -44,7 +44,7 @@ class ArxivdigestRecommender(ABC):
         :param max_recommendations: Max number of recommendations per user.
         :return: Recommendations.
         """
-        user_rankings = {}
+        recommendations = {}
         for user_id, user_data in users.items():
             s2_id = extract_s2_id(user_data)
             if s2_id is None:
@@ -59,22 +59,18 @@ class ArxivdigestRecommender(ABC):
                     "User %: unable to get author details for S2 ID %s.", user_id, s2_id
                 )
                 continue
-            user_ranking = await self.user_ranking(user_data, s2_id, paper_ids)
-            user_rankings[user_id] = [
+            user_ranking = [
                 r
-                for r in user_ranking
+                for r in await self.user_ranking(user_data, s2_id, paper_ids)
                 if r["article_id"] not in interleaved_papers[user_id] and r["score"] > 0
             ]
-        recommendations = {
-            user_id: sorted(user_ranking, key=lambda r: r["score"], reverse=True)[
-                :max_recommendations
-            ]
-            for user_id, user_ranking in user_rankings.items()
-        }
-        for user_id, user_recommendations in recommendations.items():
+            user_recommendations = sorted(
+                user_ranking, key=lambda r: r["score"], reverse=True
+            )[:max_recommendations]
             self._logger.info(
                 "User %s: recommended %d papers.", user_id, len(user_recommendations)
             )
+            recommendations[user_id] = user_recommendations
         return {
             user_id: user_recommendations
             for user_id, user_recommendations in recommendations.items()
