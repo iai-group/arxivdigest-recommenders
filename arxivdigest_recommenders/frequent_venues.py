@@ -36,33 +36,25 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
         return self._authors[s2_id]
 
-    async def user_ranking(self, user, user_s2_id, paper_ids):
+    async def score_paper(self, user, user_s2_id, paper_id):
+        async with SemanticScholar() as s2:
+            paper = await s2.paper(arxiv_id=paper_id)
+        if not paper["venue"] or paper["venue"] not in self._venues:
+            return
         user_representation = await self.author_representation(user_s2_id)
-        results = []
-        for paper_id in paper_ids:
-            try:
-                async with SemanticScholar() as s2:
-                    paper = await s2.paper(arxiv_id=paper_id)
-            except Exception:
-                continue
-            if not paper["venue"] or paper["venue"] not in self._venues:
-                continue
-            paper_representation, user_representation = pad_shortest(
-                [int(v == paper["venue"]) for v in self._venues], user_representation
+        paper_representation, user_representation = pad_shortest(
+            [int(v == paper["venue"]) for v in self._venues], user_representation
+        )
+        score = int(np.dot(paper_representation, user_representation))
+        return {
+            "article_id": paper_id,
+            "score": score,
+            "explanation": explanation(
+                self._venues, user_representation, paper_representation
             )
-            score = int(np.dot(paper_representation, user_representation))
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": explanation(
-                        self._venues, user_representation, paper_representation
-                    )
-                    if score > 0
-                    else "",
-                }
-            )
-        return results
+            if score > 0
+            else "",
+        }
 
 
 if __name__ == "__main__":

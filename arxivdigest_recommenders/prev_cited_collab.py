@@ -47,49 +47,39 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
                         self._collaborators[s2_id][author["authorId"]] = author
         return self._collaborators[s2_id]
 
-    async def user_ranking(self, user, user_s2_id, paper_ids):
+    async def score_paper(self, user, user_s2_id, paper_id):
+        async with SemanticScholar() as s2:
+            paper = await s2.paper(arxiv_id=paper_id)
+        if len(paper["authors"]) == 0 or user_s2_id in [
+            a["authorId"] for a in paper["authors"]
+        ]:
+            return
         collaborators = await self.collaborators(user_s2_id)
-        results = []
-        for paper_id in paper_ids:
-            try:
-                async with SemanticScholar() as s2:
-                    paper = await s2.paper(arxiv_id=paper_id)
-            except Exception:
+        score = 0
+        most_cited_author = None
+        citer = None
+        for collaborator_id, collaborator in collaborators.items():
+            citation_counts = await self.citation_counts(collaborator_id)
+            if collaborator["authorId"] in [a["authorId"] for a in paper["authors"]]:
                 continue
-            if len(paper["authors"]) == 0 or user_s2_id in [
-                a["authorId"] for a in paper["authors"]
-            ]:
-                continue
-            score = 0
-            most_cited_author = None
-            citer = None
-            for collaborator_id, collaborator in collaborators.items():
-                citation_counts = await self.citation_counts(collaborator_id)
-                if collaborator["authorId"] in [
-                    a["authorId"] for a in paper["authors"]
-                ]:
-                    continue
-                collaborator_most_cited_author = max(
-                    paper["authors"],
-                    key=lambda a: citation_counts[a["authorId"]],
-                )
-                collaborator_score = citation_counts[
-                    collaborator_most_cited_author["authorId"]
-                ]
-                if collaborator_score > score:
-                    score = collaborator_score
-                    most_cited_author = collaborator_most_cited_author
-                    citer = collaborator
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": explanation(most_cited_author, citer, score)
-                    if score > 0
-                    else "",
-                }
+            collaborator_most_cited_author = max(
+                paper["authors"],
+                key=lambda a: citation_counts[a["authorId"]],
             )
-        return results
+            collaborator_score = citation_counts[
+                collaborator_most_cited_author["authorId"]
+            ]
+            if collaborator_score > score:
+                score = collaborator_score
+                most_cited_author = collaborator_most_cited_author
+                citer = collaborator
+        return {
+            "article_id": paper_id,
+            "score": score,
+            "explanation": explanation(most_cited_author, citer, score)
+            if score > 0
+            else "",
+        }
 
 
 if __name__ == "__main__":

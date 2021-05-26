@@ -34,33 +34,23 @@ class PrevCitedRecommender(ArxivdigestRecommender):
                             self._citation_counts[s2_id][author["authorId"]] += 1
         return self._citation_counts[s2_id]
 
-    async def user_ranking(self, user, user_s2_id, paper_ids):
+    async def score_paper(self, user, user_s2_id, paper_id):
+        async with SemanticScholar() as s2:
+            paper = await s2.paper(arxiv_id=paper_id)
+        if len(paper["authors"]) == 0 or user_s2_id in [
+            a["authorId"] for a in paper["authors"]
+        ]:
+            return
         citation_counts = await self.citation_counts(user_s2_id)
-        results = []
-        for paper_id in paper_ids:
-            try:
-                async with SemanticScholar() as s2:
-                    paper = await s2.paper(arxiv_id=paper_id)
-            except Exception:
-                continue
-            if len(paper["authors"]) == 0 or user_s2_id in [
-                a["authorId"] for a in paper["authors"]
-            ]:
-                continue
-            most_cited_author = max(
-                paper["authors"], key=lambda a: citation_counts[a["authorId"]]
-            )
-            score = citation_counts[most_cited_author["authorId"]]
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": explanation(most_cited_author, score)
-                    if score > 0
-                    else "",
-                }
-            )
-        return results
+        most_cited_author = max(
+            paper["authors"], key=lambda a: citation_counts[a["authorId"]]
+        )
+        score = citation_counts[most_cited_author["authorId"]]
+        return {
+            "article_id": paper_id,
+            "score": score,
+            "explanation": explanation(most_cited_author, score) if score > 0 else "",
+        }
 
 
 if __name__ == "__main__":

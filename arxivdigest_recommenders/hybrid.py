@@ -3,7 +3,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 from arxivdigest.connector import ArxivdigestConnector
 from collections import defaultdict
-from typing import DefaultDict, List, Sequence
+from typing import DefaultDict, Dict, Sequence
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
@@ -30,6 +30,7 @@ class HybridRecommender(ArxivdigestRecommender):
         self._citation_counts: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )
+        self._topic_scores: Dict[str, Dict[str, DefaultDict[str, int]]] = {}
         self._indexing_run = False
         self._es = Elasticsearch(hosts=[config.ELASTICSEARCH_HOST])
         if not self._es.indices.exists(config.HYBRID_INDEX):
@@ -92,53 +93,60 @@ class HybridRecommender(ArxivdigestRecommender):
                             self._citation_counts[s2_id][author["authorId"]] += 1
         return self._citation_counts[s2_id]
 
+    def topic_scores(
+        self, user: dict, user_s2_id: str
+    ) -> Dict[str, DefaultDict[str, int]]:
+        if user_s2_id not in self._topic_scores:
+            self._topic_scores[user_s2_id] = {
+                topic: defaultdict(
+                    int,
+                    {
+                        paper["_id"]: paper["_score"]
+                        for paper in self.topic_search(topic)
+                    },
+                )
+                for topic in user["topics"]
+            }
+        return self._topic_scores[user_s2_id]
+
+    async def score_paper(self, user, user_s2_id, paper_id):
+        async with SemanticScholar() as s2:
+            paper = await s2.paper(arxiv_id=paper_id)
+        if len(paper["authors"]) == 0 or user_s2_id in [
+            a["authorId"] for a in paper["authors"]
+        ]:
+            return
+        topic_scores = self.topic_scores(user, user_s2_id)
+        citation_counts = await self.citation_counts(user_s2_id)
+        top_topics = sorted(
+            [
+                (topic, paper_scores[paper_id])
+                for topic, paper_scores in topic_scores.items()
+            ],
+            key=lambda t: t[1],
+            reverse=True,
+        )[: config.MAX_EXPLANATION_TOPICS]
+        most_cited_author = max(
+            paper["authors"], key=lambda a: citation_counts[a["authorId"]]
+        )
+        num_cites = citation_counts[most_cited_author["authorId"]]
+        score = sum(topic_score for _, topic_score in top_topics) * num_cites
+        return {
+            "article_id": paper_id,
+            "score": score,
+            "explanation": explanation(
+                most_cited_author, num_cites, [topic for topic, _ in top_topics]
+            )
+            if score > 0
+            else "",
+        }
+
     async def user_ranking(self, user, user_s2_id, paper_ids):
         if not self._indexing_run:
             await self.index_papers(paper_ids)
-        topic_scores = {
-            topic: defaultdict(
-                int,
-                {paper["_id"]: paper["_score"] for paper in self.topic_search(topic)},
-            )
-            for topic in user["topics"]
-        }
-        citation_counts = await self.citation_counts(user_s2_id)
-        results = []
-        for paper_id in paper_ids:
-            try:
-                async with SemanticScholar() as s2:
-                    paper = await s2.paper(arxiv_id=paper_id)
-            except Exception:
-                continue
-            if len(paper["authors"]) == 0 or user_s2_id in [
-                a["authorId"] for a in paper["authors"]
-            ]:
-                continue
-            top_topics = sorted(
-                [
-                    (topic, paper_scores[paper_id])
-                    for topic, paper_scores in topic_scores.items()
-                ],
-                key=lambda t: t[1],
-                reverse=True,
-            )[: config.MAX_EXPLANATION_TOPICS]
-            most_cited_author = max(
-                paper["authors"], key=lambda a: citation_counts[a["authorId"]]
-            )
-            num_cites = citation_counts[most_cited_author["authorId"]]
-            score = sum(topic_score for _, topic_score in top_topics) * num_cites
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": explanation(
-                        most_cited_author, num_cites, [topic for topic, _ in top_topics]
-                    )
-                    if score > 0
-                    else "",
-                }
-            )
-        return results
+        return await ArxivdigestRecommender.user_ranking(
+            self, user, user_s2_id, paper_ids
+        )
 
 
 if __name__ == "__main__":

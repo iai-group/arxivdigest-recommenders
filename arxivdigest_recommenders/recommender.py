@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Sequence
+from typing import List, Dict, Any, Sequence, Optional
 from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
@@ -16,9 +16,24 @@ class ArxivdigestRecommender(ABC):
         self._logger = get_logger(name, name)
 
     @abstractmethod
+    async def score_paper(
+        self, user: dict, user_s2_id: str, paper_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Score a paper for a user.
+
+        If the paper for some reason cannot be scored (e.g., if there's not enough data available or because the paper
+        is authored by the user), nothing (or None) should be returned.
+
+        :param user: User data.
+        :param user_s2_id: S2 author ID of the user.
+        :param paper_id: arXiv ID of paper.
+        :return: Dictionary containing article_id, explanation, and score keys.
+        """
+        pass
+
     async def user_ranking(
         self, user: dict, user_s2_id: str, paper_ids: Sequence[str]
-    ) -> List[dict]:
+    ) -> List[Dict[str, Any]]:
         """Generate ranking of papers for a user.
 
         :param user: User data.
@@ -26,7 +41,15 @@ class ArxivdigestRecommender(ABC):
         :param paper_ids: arXiv IDs of papers.
         :return: Ranking of candidate papers.
         """
-        pass
+        results = []
+        for paper_id in paper_ids:
+            try:
+                result = await self.score_paper(user, user_s2_id, paper_id)
+                if result and result["score"] > 0:
+                    results.append(result)
+            except Exception:
+                continue
+        return results
 
     async def recommendations(
         self,
@@ -62,7 +85,7 @@ class ArxivdigestRecommender(ABC):
             user_ranking = [
                 r
                 for r in await self.user_ranking(user_data, s2_id, paper_ids)
-                if r["article_id"] not in interleaved_papers[user_id] and r["score"] > 0
+                if r["article_id"] not in interleaved_papers[user_id]
             ]
             user_recommendations = sorted(
                 user_ranking, key=lambda r: r["score"], reverse=True

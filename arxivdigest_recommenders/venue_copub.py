@@ -69,56 +69,48 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
         return self._authors[s2_id]
 
-    async def user_ranking(self, user, user_s2_id, paper_ids):
+    async def score_paper(self, user, user_s2_id, paper_id):
+        async with SemanticScholar() as s2:
+            paper = await s2.paper(arxiv_id=paper_id)
+        if user_s2_id in [a["authorId"] for a in paper["authors"]]:
+            return
+        author_representations = await asyncio.gather(
+            *[
+                self.author_representation(a["authorId"])
+                for a in paper["authors"]
+                if a["authorId"]
+            ],
+            return_exceptions=True,
+        )
+        if not any(isinstance(a, list) for a in author_representations):
+            return
         user_representation = await self.author_representation(user_s2_id)
-        results = []
-        for paper_id in paper_ids:
-            try:
-                async with SemanticScholar() as s2:
-                    paper = await s2.paper(arxiv_id=paper_id)
-            except Exception:
-                continue
-            if user_s2_id in [a["authorId"] for a in paper["authors"]]:
-                continue
-            author_representations = await asyncio.gather(
-                *[
-                    self.author_representation(a["authorId"])
-                    for a in paper["authors"]
-                    if a["authorId"]
-                ],
-                return_exceptions=True,
+        similar_author, similar_author_name, score = max(
+            [
+                (
+                    author_representation,
+                    a["name"],
+                    padded_cosine_sim(user_representation, author_representation),
+                )
+                for a, author_representation in zip(
+                    paper["authors"], author_representations
+                )
+                if isinstance(author_representation, list)
+            ],
+            key=lambda t: t[2],
+        )
+        return {
+            "article_id": paper_id,
+            "score": score,
+            "explanation": explanation(
+                self._venues,
+                user_representation,
+                similar_author,
+                similar_author_name,
             )
-            if not any(isinstance(a, list) for a in author_representations):
-                continue
-            similar_author, similar_author_name, score = max(
-                [
-                    (
-                        author_representation,
-                        a["name"],
-                        padded_cosine_sim(user_representation, author_representation),
-                    )
-                    for a, author_representation in zip(
-                        paper["authors"], author_representations
-                    )
-                    if isinstance(author_representation, list)
-                ],
-                key=lambda t: t[2],
-            )
-            results.append(
-                {
-                    "article_id": paper_id,
-                    "score": score,
-                    "explanation": explanation(
-                        self._venues,
-                        user_representation,
-                        similar_author,
-                        similar_author_name,
-                    )
-                    if score > 0
-                    else "",
-                }
-            )
-        return results
+            if score > 0
+            else "",
+        }
 
 
 if __name__ == "__main__":
