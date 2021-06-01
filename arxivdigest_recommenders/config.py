@@ -35,6 +35,7 @@ ELASTICSEARCH_HOST = config_file.get(
 )
 S2_CONFIG = config_file.get("semantic_scholar", {})
 S2_API_KEY = S2_CONFIG.get("api_key")
+S2_MAX_CONCURRENT_REQUESTS = S2_CONFIG.get("max_concurrent_requests", 100)
 S2_MAX_REQUESTS = S2_CONFIG.get("max_requests", 100)
 S2_WINDOW_SIZE = S2_CONFIG.get("window_size", 300)
 S2_CACHE_DB = S2_CONFIG.get("cache_db", "s2cache")

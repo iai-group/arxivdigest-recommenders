@@ -27,6 +27,7 @@ class SemanticScholar:
     )
     _db = None
     _locks = defaultdict(asyncio.Lock)
+    _sem = asyncio.BoundedSemaphore(config.S2_MAX_CONCURRENT_REQUESTS)
     _errors = {}
     requests = 0
     cache_hits = 0
@@ -52,12 +53,17 @@ class SemanticScholar:
 
     async def _get(self, endpoint: str, **kwargs) -> dict:
         async with SemanticScholar._limiter:
-            res = await self._session.get(
-                f"{SemanticScholar._base_url}{endpoint}", **kwargs
-            )
+            async with SemanticScholar._sem:
+                res = await self._session.get(
+                    f"{SemanticScholar._base_url}{endpoint}", **kwargs
+                )
             SemanticScholar.requests += 1
             if SemanticScholar.requests % 100 == 0:
-                logger.debug("Requests/errors: %d/%d", SemanticScholar.requests, SemanticScholar.errors)
+                logger.debug(
+                    "Requests/errors: %d/%d",
+                    SemanticScholar.requests,
+                    SemanticScholar.errors,
+                )
             return await res.json()
 
     async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:

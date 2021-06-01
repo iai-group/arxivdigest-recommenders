@@ -106,6 +106,7 @@ It is possible to override the default settings of the recommender systems by cr
   * `port`
 * `semantic_scholar`: Semantic Scholar API config
   * `api_key`
+  * `max_concurrent_requests`: max number of concurrent requests
   * `max_requests`: max number of requests per window
   * `window_size`: window size in seconds
   * `cache_db`: MongoDB database used for caching
@@ -146,6 +147,7 @@ It is possible to override the default settings of the recommender systems by cr
   },
   "semantic_scholar": {
     "api_key": null,
+    "max_concurrent_requests": 100,
     "max_requests": 100,
     "window_size": 300,
     "cache_db": "s2cache",
