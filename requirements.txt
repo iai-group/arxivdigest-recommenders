@@ -3,3 +3,4 @@ motor~=2.4.0
 arxivdigest @ git+https://github.com/iai-group/arXivDigest.git
 numpy~=1.20.2
 elasticsearch~=7.12.1
+aioredis~=2.0.0a1

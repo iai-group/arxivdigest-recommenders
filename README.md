@@ -42,7 +42,7 @@ This recommender combines Previously Cited with the approach of the base arXivDi
 ## Requirements
 
 * Python 3.6+
-* MongoDB &mdash; Used to cache responses from the Semantic Scholar API
+* MongoDB or Redis &mdash; Used to cache responses from the Semantic Scholar API (can be disabled)
 * Elasticsearch &mdash; Used by the Hybrid recommender for topic search
 
 ## Setup
@@ -101,6 +101,9 @@ It is possible to override the default settings of the recommender systems by cr
 * `mongodb`
   * `host`
   * `port`
+* `redis`:
+  * `host`
+  * `port`
 * `elasticsearch`
   * `host`
   * `port`
@@ -109,8 +112,10 @@ It is possible to override the default settings of the recommender systems by cr
   * `max_concurrent_requests`: max number of concurrent requests
   * `max_requests`: max number of requests per window
   * `window_size`: window size in seconds
-  * `cache_responses`
-  * `cache_db`: MongoDB database used for caching
+  * `cache_responses`: enable/disable caching completely
+  * `cache_backend`: either "mongodb" or "redis"
+  * `mongodb_db`: MongoDB database used for caching
+  * `mongodb_collection`: MongoDB database used for caching
   * `paper_cache_expiration`: expiration time (in days) for paper data
   * `author_cache_expiration`: expiration time (in days) for author data
 * `max_paper_age`: papers older than this (in years) are filtered out when looking at an author's published papers
@@ -142,6 +147,10 @@ It is possible to override the default settings of the recommender systems by cr
     "host": "127.0.0.1",
     "port": 27017
   },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379
+  },
   "elasticsearch": {
     "host": "127.0.0.1",
     "port": 9200
@@ -152,7 +161,9 @@ It is possible to override the default settings of the recommender systems by cr
     "max_requests": 100,
     "window_size": 300,
     "cache_responses": true,
-    "cache_db": "s2cache",
+    "cache_backend": "redis",
+    "mongodb_db": "s2cache",
+    "mongodb_collection": "s2cache",
     "paper_cache_expiration": 30,
     "author_cache_expiration": 7
   },

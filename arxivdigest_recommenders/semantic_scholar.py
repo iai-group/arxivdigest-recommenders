@@ -1,6 +1,9 @@
 import asyncio
+import json
+from abc import ABC, abstractmethod
 from aiohttp import ClientSession, ClientResponseError
 from motor.motor_asyncio import AsyncIOMotorClient
+from aioredis import Redis
 from datetime import timedelta, date
 from collections import defaultdict
 from typing import Optional, List
@@ -11,6 +14,65 @@ from arxivdigest_recommenders import config
 
 
 logger = get_logger(__name__, "SemanticScholar")
+
+
+class CacheBackend(ABC):
+    @abstractmethod
+    async def exists(self, key: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def get(self, key: str) -> dict:
+        pass
+
+    @abstractmethod
+    async def set(self, key: str, value: dict):
+        pass
+
+
+class MongoDbBackend(CacheBackend):
+    def __init__(self):
+        self._db = None
+
+    def _set_up(self):
+        if self._db is None:
+            self._db = AsyncIOMotorClient(config.MONGODB_HOST, config.MONGODB_PORT)[
+                config.S2_MONGODB_DB
+            ]
+
+    async def exists(self, key: str) -> bool:
+        self._set_up()
+        return (
+            await self._db[config.S2_MONGODB_COLLECTION].count_documents(
+                {"_id": key}, limit=1
+            )
+        ) == 1
+
+    async def get(self, key: str) -> dict:
+        self._set_up()
+        return await self._db[config.S2_MONGODB_COLLECTION].find_one({"_id": key})
+
+    async def set(self, key: str, value: dict):
+        self._set_up()
+        await self._db[config.S2_MONGODB_COLLECTION].replace_one(
+            {"_id": key}, value, upsert=True
+        )
+
+
+class RedisBackend(CacheBackend):
+    def __init__(self):
+        self._redis = Redis(
+            host=config.REDIS_HOST, port=config.REDIS_PORT, decode_responses=True
+        )
+
+    async def exists(self, key: str) -> bool:
+        return await self._redis.exists(key)
+
+    async def get(self, key: str) -> dict:
+        return json.loads(await self._redis.get(key))
+
+    async def set(self, key: str, value: dict):
+        await self._redis.set(key, json.dumps(value))
 
 
 class SemanticScholar:
@@ -25,7 +87,7 @@ class SemanticScholar:
         if config.S2_API_KEY is not None
         else "https://api.semanticscholar.org/v1"
     )
-    _db = None
+    _cache = RedisBackend() if config.S2_CACHE_BACKEND == "redis" else MongoDbBackend()
     _locks = defaultdict(asyncio.Lock)
     _sem = asyncio.BoundedSemaphore(config.S2_MAX_CONCURRENT_REQUESTS)
     _errors = {}
@@ -39,10 +101,6 @@ class SemanticScholar:
 
     async def __aenter__(self):
         self._session = ClientSession(raise_for_status=True)
-        if SemanticScholar._db is None:
-            SemanticScholar._db = AsyncIOMotorClient(
-                config.MONGODB_HOST, config.MONGODB_PORT
-            )[config.S2_CACHE_DB]
         if config.S2_API_KEY is not None:
             self._session.headers.update({"x-api-key": config.S2_API_KEY})
         return self
@@ -66,7 +124,7 @@ class SemanticScholar:
                 )
             return await res.json()
 
-    async def _cached_get(self, endpoint: str, collection: str, max_age: int) -> dict:
+    async def _cached_get(self, endpoint: str, max_age: int) -> dict:
         if endpoint in SemanticScholar._errors:
             # There's no point in refetching and relogging exceptions for endpoints that have already responded with
             # error codes, so we just reraise any previous exception.
@@ -74,15 +132,11 @@ class SemanticScholar:
         async with SemanticScholar._locks[endpoint]:
             try:
                 if config.S2_CACHE_RESPONSES:
-                    cached = await SemanticScholar._db[collection].find_one(
-                        {"_id": endpoint}
-                    )
-                    if (
-                        cached
-                        and date.fromisoformat(cached["expiration"]) >= date.today()
-                    ):
-                        SemanticScholar.cache_hits += 1
-                        return cached["data"]
+                    if await SemanticScholar._cache.exists(endpoint):
+                        cached = await SemanticScholar._cache.get(endpoint)
+                        if date.fromisoformat(cached["expiration"]) >= date.today():
+                            SemanticScholar.cache_hits += 1
+                            return cached["data"]
                     SemanticScholar.cache_misses += 1
                     doc = {
                         "expiration": (
@@ -90,9 +144,7 @@ class SemanticScholar:
                         ).isoformat(),
                         "data": await self._get(endpoint),
                     }
-                    await SemanticScholar._db[collection].replace_one(
-                        {"_id": endpoint}, doc, upsert=True
-                    )
+                    await SemanticScholar._cache.set(endpoint, doc)
                     return doc["data"]
                 else:
                     return await self._get(endpoint)
@@ -117,7 +169,6 @@ class SemanticScholar:
         paper_id = s2_id if s2_id is not None else f"arXiv:{arxiv_id}"
         return await self._cached_get(
             f"/paper/{paper_id}",
-            "papers",
             config.S2_PAPER_EXPIRATION,
         )
 
@@ -129,7 +180,6 @@ class SemanticScholar:
         """
         return await self._cached_get(
             f"/author/{s2_id}",
-            "authors",
             config.S2_AUTHOR_EXPIRATION,
         )
 
