@@ -73,21 +73,29 @@ class SemanticScholar:
             raise SemanticScholar._errors[endpoint]
         async with SemanticScholar._locks[endpoint]:
             try:
-                cached = await SemanticScholar._db[collection].find_one(
-                    {"_id": endpoint}
-                )
-                if cached and date.fromisoformat(cached["expiration"]) >= date.today():
-                    SemanticScholar.cache_hits += 1
-                    return cached["data"]
-                SemanticScholar.cache_misses += 1
-                doc = {
-                    "expiration": (date.today() + timedelta(days=max_age)).isoformat(),
-                    "data": await self._get(endpoint),
-                }
-                await SemanticScholar._db[collection].replace_one(
-                    {"_id": endpoint}, doc, upsert=True
-                )
-                return doc["data"]
+                if config.S2_CACHE_RESPONSES:
+                    cached = await SemanticScholar._db[collection].find_one(
+                        {"_id": endpoint}
+                    )
+                    if (
+                        cached
+                        and date.fromisoformat(cached["expiration"]) >= date.today()
+                    ):
+                        SemanticScholar.cache_hits += 1
+                        return cached["data"]
+                    SemanticScholar.cache_misses += 1
+                    doc = {
+                        "expiration": (
+                            date.today() + timedelta(days=max_age)
+                        ).isoformat(),
+                        "data": await self._get(endpoint),
+                    }
+                    await SemanticScholar._db[collection].replace_one(
+                        {"_id": endpoint}, doc, upsert=True
+                    )
+                    return doc["data"]
+                else:
+                    return await self._get(endpoint)
             except ClientResponseError as e:
                 logger.warn("%s: %s %s.", endpoint, e.status, e.message)
                 SemanticScholar.errors += 1

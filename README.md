@@ -109,6 +109,7 @@ It is possible to override the default settings of the recommender systems by cr
   * `max_concurrent_requests`: max number of concurrent requests
   * `max_requests`: max number of requests per window
   * `window_size`: window size in seconds
+  * `cache_responses`
   * `cache_db`: MongoDB database used for caching
   * `paper_cache_expiration`: expiration time (in days) for paper data
   * `author_cache_expiration`: expiration time (in days) for author data
@@ -150,6 +151,7 @@ It is possible to override the default settings of the recommender systems by cr
     "max_concurrent_requests": 100,
     "max_requests": 100,
     "window_size": 300,
+    "cache_responses": true,
     "cache_db": "s2cache",
     "paper_cache_expiration": 30,
     "author_cache_expiration": 7
