@@ -1,6 +1,7 @@
 import asyncio
 import time
 import numpy as np
+import numpy.typing as npt
 from urllib.parse import urlparse
 from typing import Optional, List, Tuple, Any, Sequence, TypeVar, Iterator
 
@@ -18,8 +19,8 @@ def extract_s2_id(user: dict) -> Optional[str]:
     return s2_id if len(s2_id) > 0 else None
 
 
-def pad_shortest(a: list, b: list, pad: Any = 0) -> Tuple[list, list]:
-    """Pad the shortest of two lists in order to make them the same length.
+def pad_shortest(a: npt.ArrayLike, b: npt.ArrayLike, pad: Any = 0):
+    """Pad the shortest of two arrays in order to make them the same length.
 
     :param a: Vector a.
     :param b: Vector b.
@@ -28,20 +29,20 @@ def pad_shortest(a: list, b: list, pad: Any = 0) -> Tuple[list, list]:
     """
     len_diff = len(a) - len(b)
     if len_diff > 0:
-        b = b + [pad] * len_diff
+        b = np.pad(b, (0, len_diff), constant_values=pad)
     elif len_diff < 0:
-        a = a + [pad] * abs(len_diff)
+        a = np.pad(a, (0, abs(len_diff)), constant_values=pad)
     return a, b
 
 
-def padded_cosine_sim(a: List[int], b: List[int]) -> float:
+def padded_cosine_sim(a: npt.ArrayLike, b: npt.ArrayLike) -> float:
     """Find the cosine similarity between two vectors. The shortest vector is padded with zeros.
 
     :param a: Vector a.
     :param b: Vector b.
     :return: Cosine similarity.
     """
-    if all(v == 0 for v in a) or all(v == 0 for v in b):
+    if not np.count_nonzero(a) or not np.count_nonzero(b):
         return 0.0
     a, b = pad_shortest(a, b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))

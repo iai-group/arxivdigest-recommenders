@@ -1,6 +1,8 @@
 import asyncio
 from collections import defaultdict
 from typing import List, Dict, DefaultDict
+import numpy as np
+import numpy.typing as npt
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
@@ -11,8 +13,8 @@ from arxivdigest_recommenders import config
 
 def explanation(
     venues: List[str],
-    user: List[int],
-    author: List[int],
+    user: np.ndarray,
+    author: np.ndarray,
     author_name: str,
     author_influence: DefaultDict[int, int],
 ) -> str:
@@ -39,10 +41,10 @@ class WeightedInfRecommender(ArxivdigestRecommender):
     def __init__(self):
         super().__init__(config.WEIGHTED_INF_API_KEY, "WeightedInfRecommender")
         self._venues: List[str] = []
-        self._authors: Dict[str, List[int]] = {}
+        self._authors: Dict[str, np.ndarray] = {}
         self._influence: Dict[str, DefaultDict[int, int]] = {}
 
-    async def author_representation(self, s2_id: str) -> List[int]:
+    async def author_representation(self, s2_id: str) -> np.ndarray:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
                 papers = await s2.author_papers(s2_id=s2_id)
@@ -83,7 +85,7 @@ class WeightedInfRecommender(ArxivdigestRecommender):
             ],
             return_exceptions=True,
         )
-        if not any(isinstance(a, list) for a in author_representations):
+        if not any(isinstance(a, np.ndarray) for a in author_representations):
             return
         user_representation = await self.author_representation(user_s2_id)
         author_influences = await asyncio.gather(
@@ -104,7 +106,7 @@ class WeightedInfRecommender(ArxivdigestRecommender):
         for author, author_representation, author_influence in zip(
             paper["authors"], author_representations, author_influences
         ):
-            if not isinstance(author_representation, list) or not isinstance(
+            if not isinstance(author_representation, np.ndarray) or not isinstance(
                 author_influence, defaultdict
             ):
                 continue

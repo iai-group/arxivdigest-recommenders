@@ -1,5 +1,6 @@
 import asyncio
 import random
+import numpy as np
 from typing import List, Dict
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
@@ -10,7 +11,7 @@ from arxivdigest_recommenders import config
 
 
 def explanation(
-    venues: List[str], user: List[int], author: List[int], author_name: str
+    venues: List[str], user: np.ndarray, author: np.ndarray, author_name: str
 ) -> str:
     """Generate a recommendation explanation.
 
@@ -60,9 +61,9 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
     def __init__(self):
         super().__init__(config.VENUE_COPUB_API_KEY, "VenueCoPubRecommender")
         self._venues: List[str] = []
-        self._authors: Dict[str, List[int]] = {}
+        self._authors: Dict[str, np.ndarray] = {}
 
-    async def author_representation(self, s2_id: str) -> List[int]:
+    async def author_representation(self, s2_id: str) -> np.ndarray:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
                 papers = await s2.author_papers(s2_id=s2_id)
@@ -82,7 +83,7 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
             ],
             return_exceptions=True,
         )
-        if not any(isinstance(a, list) for a in author_representations):
+        if not any(isinstance(a, np.ndarray) for a in author_representations):
             return
         user_representation = await self.author_representation(user_s2_id)
         similar_author, similar_author_name, score = max(
@@ -95,7 +96,7 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
                 for a, author_representation in zip(
                     paper["authors"], author_representations
                 )
-                if isinstance(author_representation, list)
+                if isinstance(author_representation, np.ndarray)
             ],
             key=lambda t: t[2],
         )
