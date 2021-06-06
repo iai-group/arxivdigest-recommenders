@@ -27,12 +27,12 @@ class FrequentVenuesRecommender(ArxivdigestRecommender):
     def __init__(self):
         super().__init__(config.FREQUENT_VENUES_API_KEY, "FrequentVenuesRecommender")
         self._venues: List[str] = []
-        self._authors: Dict[str, List[int]] = {}
+        self._authors: Dict[str, np.ndarray] = {}
 
-    async def author_representation(self, s2_id: str) -> List[int]:
+    async def author_representation(self, s2_id: str) -> np.ndarray:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
         return self._authors[s2_id]
 

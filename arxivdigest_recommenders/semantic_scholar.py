@@ -184,23 +184,15 @@ class SemanticScholar:
         )
 
     async def author_papers(
-        self,
-        author: dict = None,
-        s2_id: str = None,
-        max_age=config.MAX_PAPER_AGE,
+        self, s2_id: str, max_age=config.MAX_PAPER_AGE
     ) -> List[dict]:
         """Get metadata of an author's published papers.
 
-        :param author: S2 author metadata.
         :param s2_id: S2 author ID.
         :param max_age: Max paper age.
         :return: Metadata of published papers.
         """
-        if sum(i is None for i in (author, s2_id)) != 1:
-            raise ValueError("Either S2 author data or S2 author ID must be provided.")
-
-        if author is None:
-            author = await self.author(s2_id)
+        author = await self.author(s2_id)
 
         min_year = -1 if max_age is None else date.today().year - max_age
         return await gather(

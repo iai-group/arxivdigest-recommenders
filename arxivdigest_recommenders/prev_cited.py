@@ -26,7 +26,7 @@ class PrevCitedRecommender(ArxivdigestRecommender):
     async def citation_counts(self, s2_id: str) -> DefaultDict[str, int]:
         if s2_id not in self._citation_counts:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             for paper in papers:
                 for reference in paper["references"]:
                     for author in reference["authors"]:

@@ -29,7 +29,7 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
     async def citation_counts(self, s2_id: str) -> DefaultDict[str, int]:
         if s2_id not in self._citation_counts:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             for paper in papers:
                 for reference in paper["references"]:
                     for author in reference["authors"]:
@@ -40,7 +40,7 @@ class PrevCitedCollabRecommender(ArxivdigestRecommender):
     async def collaborators(self, s2_id: str) -> Dict[str, Any]:
         if s2_id not in self._collaborators:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             for paper in papers:
                 for author in paper["authors"]:
                     if author["authorId"] and author["authorId"] != s2_id:

@@ -47,14 +47,14 @@ class WeightedInfRecommender(ArxivdigestRecommender):
     async def author_representation(self, s2_id: str) -> np.ndarray:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
         return self._authors[s2_id]
 
     async def author_influence(self, s2_id: str) -> DefaultDict[int, int]:
         if s2_id not in self._influence:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
             author_influence = defaultdict(int)
             for paper in papers:

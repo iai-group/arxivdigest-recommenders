@@ -66,7 +66,7 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
     async def author_representation(self, s2_id: str) -> np.ndarray:
         if s2_id not in self._authors:
             async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id=s2_id)
+                papers = await s2.author_papers(s2_id)
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
         return self._authors[s2_id]
 
