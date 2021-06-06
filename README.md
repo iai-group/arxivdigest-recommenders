@@ -13,7 +13,7 @@ The author details and paper metadata used by the recommender systems are retrie
 | Weighted Influence | `weighted_inf.py` | `WeightedInfRecommender` |
 | Previously Cited | `prev_cited.py` | `PrevCitedRecommender` |
 | Previously Cited by Collaborators | `prev_cited_collab.py` | `PrevCitedCollabRecommender` |
-| Hybrid: Previously Cited and Topic Search | `hybrid.py` | `HybridRecommender` |
+| Previously Cited and Topic Search | `prev_cited_topic.py` | `PrevCitedTopicSearchRecommender` |
 
 ### Frequent Venues
 
@@ -35,7 +35,7 @@ This recommender recommends papers that are published by authors that the user h
 
 This recommender is similar to the Previously Cited recommender, but instead of looking at whether the user has cited the authors of a paper, it looks at whether the user's previous collaborators have done so.
 
-### Hybrid: Previously Cited and Topic Search
+### Previously Cited and Topic Search
 
 This recommender combines Previously Cited with the approach of the base arXivDigest recommender system, which queries an Elasicsearch index containing the candidate papers for the user's topics of interest.
 
@@ -43,7 +43,7 @@ This recommender combines Previously Cited with the approach of the base arXivDi
 
 * Python 3.6+
 * MongoDB or Redis &mdash; Used to cache responses from the Semantic Scholar API (can be disabled)
-* Elasticsearch &mdash; Used by the Hybrid recommender for topic search
+* Elasticsearch &mdash; Used by the Previously Cited and Topic Search recommender for topic search
 
 ## Setup
 
@@ -132,7 +132,7 @@ It is possible to override the default settings of the recommender systems by cr
   * `arxivdigest_api_key`
 * `prev_cited_collab_recommender`: Previously Cited by Collaborators recomender config
   * `arxivdigest_api_key`
-* `hybrid_recommender`: Previously Cited by Collaborators recomender config
+* `prev_cited_topic_recommender`: Previously Cited and Topic Search recomender config
   * `arxivdigest_api_key`
   * `index`: Elasticsearch index for candidate paper indexing and topic search
   * `max_explanation_topics`: max number of topics to include in explanations
@@ -186,7 +186,7 @@ It is possible to override the default settings of the recommender systems by cr
   "prev_cited_collab_recommender": {
     "arxivdigest_api_key": null
   },
-  "hybrid_recommender": {
+  "prev_cited_topic_recommender": {
     "arxivdigest_api_key": null,
     "index": "arxivdigest_papers",
     "max_explanation_topics": 3

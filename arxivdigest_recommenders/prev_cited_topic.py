@@ -21,20 +21,22 @@ def explanation(author: dict, num_cites: int, topics: Sequence[str]) -> str:
     )
 
 
-class HybridRecommender(ArxivdigestRecommender):
+class PrevCitedTopicSearchRecommender(ArxivdigestRecommender):
     """Recommender system that recommends papers published by authors that the user has previously cited and that are
     relevant to the user's topics of interest."""
 
     def __init__(self):
-        super().__init__(config.HYBRID_API_KEY, "HybridRecommender")
+        super().__init__(
+            config.PREV_CITED_TOPIC_API_KEY, "PrevCitedTopicSearchRecommender"
+        )
         self._citation_counts: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
             lambda: defaultdict(int)
         )
         self._topic_scores: Dict[str, Dict[str, DefaultDict[str, int]]] = {}
         self._indexing_run = False
         self._es = Elasticsearch(hosts=[config.ELASTICSEARCH_HOST])
-        if not self._es.indices.exists(config.HYBRID_INDEX):
-            self._es.indices.create(config.HYBRID_INDEX)
+        if not self._es.indices.exists(config.PREV_CITED_TOPIC_INDEX):
+            self._es.indices.create(config.PREV_CITED_TOPIC_INDEX)
 
     async def index_papers(self, paper_ids: Sequence[str]):
         self._logger.info("Indexing candidate papers in Elasticsearch.")
@@ -43,14 +45,14 @@ class HybridRecommender(ArxivdigestRecommender):
                 *[s2.paper(arxiv_id=paper_id) for paper_id in paper_ids],
                 return_exceptions=True,
             )
-        paper_data = ArxivdigestConnector(config.HYBRID_API_KEY).get_article_data(
-            paper_ids
-        )
+        paper_data = ArxivdigestConnector(
+            config.PREV_CITED_TOPIC_API_KEY
+        ).get_article_data(paper_ids)
         bulk(
             self._es,
             (
                 {
-                    "_index": config.HYBRID_INDEX,
+                    "_index": config.PREV_CITED_TOPIC_INDEX,
                     "_id": paper_id,
                     "_source": {
                         "title": paper["title"],
@@ -79,7 +81,7 @@ class HybridRecommender(ArxivdigestRecommender):
             }
         }
         return self._es.search(
-            index=config.HYBRID_INDEX, body=query, size=10000, _source=False
+            index=config.PREV_CITED_TOPIC_INDEX, body=query, size=10000, _source=False
         )["hits"]["hits"]
 
     async def citation_counts(self, s2_id: str) -> DefaultDict[str, int]:
@@ -150,5 +152,5 @@ class HybridRecommender(ArxivdigestRecommender):
 
 
 if __name__ == "__main__":
-    recommender = HybridRecommender()
+    recommender = PrevCitedTopicSearchRecommender()
     asyncio.run(recommender.recommend())

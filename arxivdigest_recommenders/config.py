@@ -66,7 +66,7 @@ PREV_CITED_API_KEY = config_file.get("prev_cited_recommender", {}).get(
 PREV_CITED_COLLAB_API_KEY = config_file.get("prev_cited_collab_recommender", {}).get(
     "arxivdigest_api_key", ""
 )
-HYBRID_CONFIG = config_file.get("hybrid_recommender", {})
-HYBRID_API_KEY = HYBRID_CONFIG.get("arxivdigest_api_key", "")
-HYBRID_INDEX = HYBRID_CONFIG.get("index", "arxivdigest_papers")
-MAX_EXPLANATION_TOPICS = HYBRID_CONFIG.get("max_explanation_topics", 3)
+PREV_CITED_TOPIC_CONFIG = config_file.get("prev_cited_topic_recommender", {})
+PREV_CITED_TOPIC_API_KEY = PREV_CITED_TOPIC_CONFIG.get("arxivdigest_api_key", "")
+PREV_CITED_TOPIC_INDEX = PREV_CITED_TOPIC_CONFIG.get("index", "arxivdigest_papers")
+MAX_EXPLANATION_TOPICS = PREV_CITED_TOPIC_CONFIG.get("max_explanation_topics", 3)
