@@ -2,7 +2,6 @@ import asyncio
 from collections import defaultdict
 from typing import List, Dict, DefaultDict
 import numpy as np
-import numpy.typing as npt
 
 from arxivdigest_recommenders.recommender import ArxivdigestRecommender
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
@@ -77,41 +76,24 @@ class WeightedInfRecommender(ArxivdigestRecommender):
             paper = await s2.paper(arxiv_id=paper_id)
         if user_s2_id in [a["authorId"] for a in paper["authors"]]:
             return
-        author_representations = await asyncio.gather(
-            *[
-                self.author_representation(a["authorId"])
-                for a in paper["authors"]
-                if a["authorId"]
-            ],
-            return_exceptions=True,
-        )
-        if not any(isinstance(a, np.ndarray) for a in author_representations):
-            return
         user_representation = await self.author_representation(user_s2_id)
-        author_influences = await asyncio.gather(
-            *[
-                self.author_influence(a["authorId"])
-                for a in paper["authors"]
-                if a["authorId"]
-            ],
-            return_exceptions=True,
-        )
-        user_venue_indexes = [
-            i for i, user_count in enumerate(user_representation) if user_count > 0
-        ]
+        user_venue_indexes = np.nonzero(user_representation)[0]
         similar_author = None
         similar_author_name = None
         similar_author_influence = None
         score = 0
-        for author, author_representation, author_influence in zip(
-            paper["authors"], author_representations, author_influences
-        ):
-            if not isinstance(author_representation, np.ndarray) or not isinstance(
-                author_influence, defaultdict
-            ):
+        for author in paper["authors"]:
+            if not author["authorId"]:
                 continue
-            author_score = sum(
-                author_influence[v] for v in user_venue_indexes
+            try:
+                author_representation = await self.author_representation(
+                    author["authorId"]
+                )
+                author_influence = await self.author_influence(author["authorId"])
+            except Exception:
+                continue
+            author_score = np.sum(
+                np.vectorize(author_influence.get)(user_venue_indexes)
             ) * padded_cosine_sim(user_representation, author_representation)
             if author_score > score:
                 similar_author = author_representation

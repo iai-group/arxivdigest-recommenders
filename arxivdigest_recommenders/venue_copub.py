@@ -75,31 +75,24 @@ class VenueCoPubRecommender(ArxivdigestRecommender):
             paper = await s2.paper(arxiv_id=paper_id)
         if user_s2_id in [a["authorId"] for a in paper["authors"]]:
             return
-        author_representations = await asyncio.gather(
-            *[
-                self.author_representation(a["authorId"])
-                for a in paper["authors"]
-                if a["authorId"]
-            ],
-            return_exceptions=True,
-        )
-        if not any(isinstance(a, np.ndarray) for a in author_representations):
-            return
         user_representation = await self.author_representation(user_s2_id)
-        similar_author, similar_author_name, score = max(
-            [
-                (
-                    author_representation,
-                    a["name"],
-                    padded_cosine_sim(user_representation, author_representation),
+        similar_author = None
+        similar_author_name = None
+        score = 0
+        for author in paper["authors"]:
+            if not author["authorId"]:
+                continue
+            try:
+                author_representation = await self.author_representation(
+                    author["authorId"]
                 )
-                for a, author_representation in zip(
-                    paper["authors"], author_representations
-                )
-                if isinstance(author_representation, np.ndarray)
-            ],
-            key=lambda t: t[2],
-        )
+            except Exception:
+                continue
+            author_score = padded_cosine_sim(user_representation, author_representation)
+            if author_score > score:
+                similar_author = author_representation
+                similar_author_name = author["name"]
+                score = author_score
         return {
             "article_id": paper_id,
             "score": score,

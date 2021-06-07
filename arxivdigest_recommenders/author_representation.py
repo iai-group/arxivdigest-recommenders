@@ -16,8 +16,14 @@ def venue_author_representation(
     :param published_papers: Papers published by the author.
     :return: Author vector representation.
     """
-    author_venues = [paper["venue"] for paper in published_papers if paper["venue"]]
-    for venue in author_venues:
-        if venue.lower() not in config.VENUE_BLACKLIST and venue not in venues:
-            venues.append(venue)
-    return np.array([author_venues.count(venue) for venue in venues])
+    author_venues = (paper["venue"] for paper in published_papers if paper["venue"])
+    num_author_venues = sum(int(paper["venue"] is not None) for paper in published_papers)
+    representation = np.zeros(len(venues) + num_author_venues, dtype=int)
+    for author_venue in author_venues:
+        if author_venue.lower() in config.VENUE_BLACKLIST:
+            continue
+        if author_venue not in venues:
+            venues.append(author_venue)
+        venue_index = venues.index(author_venue)
+        representation[venue_index] += 1
+    return np.trim_zeros(representation, "b")
