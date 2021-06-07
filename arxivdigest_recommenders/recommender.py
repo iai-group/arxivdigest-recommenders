@@ -1,10 +1,11 @@
+import asyncio
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Sequence, Optional
 from arxivdigest.connector import ArxivdigestConnector
 
 from arxivdigest_recommenders import config
 from arxivdigest_recommenders.semantic_scholar import SemanticScholar
-from arxivdigest_recommenders.util import extract_s2_id
+from arxivdigest_recommenders.util import extract_s2_id, chunks
 from arxivdigest_recommenders.log import get_logger
 
 
@@ -32,23 +33,25 @@ class ArxivdigestRecommender(ABC):
         pass
 
     async def user_ranking(
-        self, user: dict, user_s2_id: str, paper_ids: Sequence[str]
+        self, user: dict, user_s2_id: str, paper_ids: Sequence[str], batch_size=10
     ) -> List[Dict[str, Any]]:
         """Generate ranking of papers for a user.
 
         :param user: User data.
         :param user_s2_id: S2 author ID of the user.
         :param paper_ids: arXiv IDs of papers.
+        :param batch_size: Number of papers scored concurrently.
         :return: Ranking of candidate papers.
         """
         results = []
-        for paper_id in paper_ids:
-            try:
-                result = await self.score_paper(user, user_s2_id, paper_id)
-                if result and result["score"] > 0:
-                    results.append(result)
-            except Exception:
-                continue
+        for paper_id_chunk in chunks(paper_ids, 5):
+            chunk_results = await asyncio.gather(
+                *[self.score_paper(user, user_s2_id, p) for p in paper_id_chunk],
+                return_exceptions=True
+            )
+            results.extend(
+                r for r in chunk_results if isinstance(r, dict) and r["score"] > 0
+            )
         return results
 
     async def recommendations(
