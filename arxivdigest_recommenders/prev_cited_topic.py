@@ -143,11 +143,11 @@ class PrevCitedTopicSearchRecommender(ArxivdigestRecommender):
             else "",
         }
 
-    async def user_ranking(self, user, user_s2_id, paper_ids):
+    async def user_ranking(self, user, user_s2_id, paper_ids, batch_size=10):
         if not self._indexing_run:
             await self.index_papers(paper_ids)
         return await ArxivdigestRecommender.user_ranking(
-            self, user, user_s2_id, paper_ids
+            self, user, user_s2_id, paper_ids, batch_size
         )
 
 
