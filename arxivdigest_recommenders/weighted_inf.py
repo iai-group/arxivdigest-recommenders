@@ -48,13 +48,6 @@ class WeightedInfRecommender(ArxivdigestRecommender):
             async with SemanticScholar() as s2:
                 papers = await s2.author_papers(s2_id)
             self._authors[s2_id] = venue_author_representation(self._venues, papers)
-        return self._authors[s2_id]
-
-    async def author_influence(self, s2_id: str) -> DefaultDict[int, int]:
-        if s2_id not in self._influence:
-            async with SemanticScholar() as s2:
-                papers = await s2.author_papers(s2_id)
-            self._authors[s2_id] = venue_author_representation(self._venues, papers)
             author_influence = defaultdict(int)
             for paper in papers:
                 if paper["venue"] and paper["venue"] in self._venues:
@@ -69,7 +62,7 @@ class WeightedInfRecommender(ArxivdigestRecommender):
                     if venue_influence >= config.WEIGHTED_INF_MIN_INFLUENCE
                 },
             )
-        return self._influence[s2_id]
+        return self._authors[s2_id]
 
     async def score_paper(self, user, user_s2_id, paper_id):
         async with SemanticScholar() as s2:
@@ -89,7 +82,7 @@ class WeightedInfRecommender(ArxivdigestRecommender):
                 author_representation = await self.author_representation(
                     author["authorId"]
                 )
-                author_influence = await self.author_influence(author["authorId"])
+                author_influence = self._influence[author["authorId"]]
             except Exception:
                 continue
             author_score = np.sum(
