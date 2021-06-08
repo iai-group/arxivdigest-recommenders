@@ -93,7 +93,7 @@ class WeightedInfRecommender(ArxivdigestRecommender):
             except Exception:
                 continue
             author_score = np.sum(
-                np.vectorize(author_influence.get)(user_venue_indexes)
+                np.vectorize(author_influence.__getitem__)(user_venue_indexes)
             ) * padded_cosine_sim(user_representation, author_representation)
             if author_score > score:
                 similar_author = author_representation
